@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SleepZzz — Baby Tracker</title>
+  <meta name="description" content="Track your baby's sleep, feeding, and diaper changes with beautiful analytics.">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💤</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0eef6;
+      --surface: #ffffff;
+      --surface-glass: rgba(255, 255, 255, 0.72);
+      --primary: #7c5cbf;
+      --primary-light: #a78bfa;
+      --primary-dark: #5b3e9e;
+      --accent-mint: #6ee7b7;
+      --accent-peach: #fca5a5;
+      --accent-sky: #7dd3fc;
+      --accent-amber: #fcd34d;
+      --text: #1e1b2e;
+      --text-muted: #6b6580;
+      --border: #e2dff0;
+      --shadow: 0 2px 16px rgba(124, 92, 191, 0.10);
+      --shadow-lg: 0 8px 32px rgba(124, 92, 191, 0.15);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Nunito', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ───────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 20px 24px 16px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(91, 62, 158, 0.3);
+    }
+
+    .header h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .header p {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    /* ── Tabs ─────────────────────────────────── */
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 76px;
+      z-index: 99;
+      overflow-x: auto;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 14px 8px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: var(--transition);
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .tab:hover {
+      color: var(--primary);
+    }
+
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: rgba(124, 92, 191, 0.04);
+    }
+
+    .tab-icon {
+      font-size: 1.2rem;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* ── Content ──────────────────────────────── */
+    .content {
+      padding: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    /* ── Cards ────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card h3 {
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Forms ────────────────────────────────── */
+    .form-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .form-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 10px 12px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: var(--transition);
+      background: var(--bg);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(124, 92, 191, 0.12);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 50px;
+    }
+
+    /* ── Buttons ──────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      box-shadow: 0 4px 14px rgba(124, 92, 191, 0.3);
+      width: 100%;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(124, 92, 191, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-danger {
+      background: none;
+      color: var(--accent-peach);
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+
+    .btn-danger:hover {
+      color: #ef4444;
+    }
+
+    /* ── Type Pills ──────────────────────────── */
+    .type-pills {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .pill {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      text-align: center;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.82rem;
+      transition: var(--transition);
+      background: var(--bg);
+      user-select: none;
+    }
+
+    .pill:hover {
+      border-color: var(--primary-light);
+    }
+
+    .pill.active {
+      border-color: var(--primary);
+      background: rgba(124, 92, 191, 0.08);
+      color: var(--primary);
+    }
+
+    /* ── Entry List ──────────────────────────── */
+    .entries-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .entries-header h3 {
+      margin-bottom: 0;
+    }
+
+    .entry-item {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      margin-bottom: 8px;
+      transition: var(--transition);
+    }
+
+    .entry-item:hover {
+      background: #e8e5f2;
+    }
+
+    .entry-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+
+    .entry-icon.sleep {
+      background: rgba(167, 139, 250, 0.2);
+    }
+
+    .entry-icon.feed {
+      background: rgba(110, 231, 183, 0.2);
+    }
+
+    .entry-icon.diaper {
+      background: rgba(252, 211, 77, 0.2);
+    }
+
+    .entry-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .entry-title {
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+
+    .entry-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .entry-actions {
+      flex-shrink: 0;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-muted);
+    }
+
+    .empty-state .emoji {
+      font-size: 2.4rem;
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 0.9rem;
+    }
+
+    /* ── Dashboard ────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-top: 2px;
+    }
+
+    .range-selector {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      justify-content: center;
+    }
+
+    .range-btn {
+      padding: 8px 16px;
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-muted);
+    }
+
+    .range-btn.active {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: white;
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    .chart-card h4 {
+      font-size: 0.85rem;
+      color: var(--primary-dark);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 220px;
+    }
+
+    .chart-container.doughnut {
+      height: 200px;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+
+    /* ── Toast ────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--primary-dark);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      box-shadow: var(--shadow-lg);
+      z-index: 1000;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Loading ──────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ── Responsive ───────────────────────────── */
+    .conditional-section {
+      display: none;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .conditional-section.visible {
+      display: block;
+    }
+
+    @media (max-width: 400px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .form-row {
+        flex-direction: column;
+        gap: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="header">
+    <h1>💤 SleepZzz</h1>
+    <p>Baby Tracker</p>
+  </header>
+
+  <nav class="tabs">
+    <div class="tab active" data-tab="sleep">
+      <span class="tab-icon">😴</span> Sleep
+    </div>
+    <div class="tab" data-tab="feed">
+      <span class="tab-icon">🍼</span> Feed
+    </div>
+    <div class="tab" data-tab="diaper">
+      <span class="tab-icon">👶</span> Diaper
+    </div>
+    <div class="tab" data-tab="dashboard">
+      <span class="tab-icon">📊</span> Dashboard
+    </div>
+  </nav>
+
+  <div class="content">
+
+    <!-- ═══ SLEEP PANEL ═══ -->
+    <div class="panel active" id="panel-sleep">
+      <div class="card">
+        <h3>😴 Log Sleep</h3>
+        <div class="type-pills" id="sleep-type">
+          <div class="pill active" data-value="nap">🌤️ Nap</div>
+          <div class="pill" data-value="night">🌙 Night</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Time</label>
+            <input type="datetime-local" id="sleep-start">
+          </div>
+          <div class="form-group">
+            <label>End Time</label>
+            <input type="datetime-local" id="sleep-end">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Notes (optional)</label>
+          <textarea id="sleep-notes" placeholder="e.g. slept through the night 🎉"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="addSleep()">✨ Save Sleep Entry</button>
+      </div>
+
+      <div class="card">
+        <div class="entries-header">
+          <h3>📋 Recent Sleep</h3>
+        </div>
+        <div id="sleep-list"></div>
+      </div>
+    </div>
+
+    <!-- ═══ FEED PANEL ═══ -->
+    <div class="panel" id="panel-feed">
+      <div class="card">
+        <h3>🍼 Log Feeding</h3>
+        <div class="type-pills" id="feed-type">
+          <div class="pill active" data-value="milk">🥛 Milk</div>
+          <div class="pill" data-value="solid">🥣 Solid</div>
+        </div>
+
+        <!-- Milk sub-options -->
+        <div class="conditional-section visible" id="milk-options">
+          <div class="type-pills" id="milk-sub-type" style="margin-bottom:12px">
+            <div class="pill active" data-value="formula">🍼 Formula</div>
+            <div class="pill" data-value="breast_milk">🤱 Breast Milk</div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Time</label>
+              <input type="datetime-local" id="feed-time-milk">
+            </div>
+            <div class="form-group">
+              <label>Amount (oz)</label>
+              <input type="number" id="feed-amount-oz" placeholder="e.g. 4" min="0" step="0.5">
+            </div>
+          </div>
+        </div>
+
+        <!-- Solid sub-options -->
+        <div class="conditional-section" id="solid-options">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Category</label>
+              <select id="solid-category">
+                <option value="fruit">🍎 Fruit</option>
+                <option value="vegetable">🥦 Vegetable</option>
+                <option value="meat">🍗 Meat</option>
+                <option value="dairy">🧀 Dairy</option>
+                <option value="fish">🐟 Fish</option>
+                <option value="nuts">🥜 Nuts</option>
+                <option value="grain">🌾 Grain</option>
+                <option value="egg">🥚 Egg</option>
+                <option value="other">🥄 Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Time</label>
+              <input type="datetime-local" id="feed-time-solid">
+            </div>
+            <div class="form-group">
+              <label>Amount (tsp)</label>
+              <input type="number" id="feed-amount-tsp" placeholder="e.g. 2" min="0" step="0.5">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Notes (optional)</label>
+          <textarea id="feed-notes" placeholder="e.g. really hungry today"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="addFeed()">✨ Save Feed Entry</button>
+      </div>
+
+      <div class="card">
+        <div class="entries-header">
+          <h3>📋 Recent Feeds</h3>
+        </div>
+        <div id="feed-list"></div>
+      </div>
+    </div>
+
+    <!-- ═══ DIAPER PANEL ═══ -->
+    <div class="panel" id="panel-diaper">
+      <div class="card">
+        <h3>👶 Log Diaper Change</h3>
+        <div class="type-pills" id="diaper-type">
+          <div class="pill active" data-value="wet">💧 Wet</div>
+          <div class="pill" data-value="dirty">💩 Dirty</div>
+          <div class="pill" data-value="both">💧💩 Both</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Time</label>
+            <input type="datetime-local" id="diaper-time">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Notes (optional)</label>
+          <textarea id="diaper-notes" placeholder="e.g. blowout 😅"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="addDiaper()">✨ Save Diaper Entry</button>
+      </div>
+
+      <div class="card">
+        <div class="entries-header">
+          <h3>📋 Recent Changes</h3>
+        </div>
+        <div id="diaper-list"></div>
+      </div>
+    </div>
+
+    <!-- ═══ DASHBOARD PANEL ═══ -->
+    <div class="panel" id="panel-dashboard">
+      <div class="range-selector">
+        <button class="range-btn active" data-days="7">7 Days</button>
+        <button class="range-btn" data-days="14">14 Days</button>
+        <button class="range-btn" data-days="30">30 Days</button>
+      </div>
+
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-sleep-hours">—</div>
+          <div class="stat-label">Hours Slept</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-milk-oz">—</div>
+          <div class="stat-label">Milk (oz)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-diapers">—</div>
+          <div class="stat-label">Diapers</div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h4>📊 Daily Sleep Hours</h4>
+        <div class="chart-container">
+          <canvas id="chart-sleep"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h4>🍼 Daily Milk Intake</h4>
+        <div class="chart-container">
+          <canvas id="chart-feeds"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h4>🌅 Sleep: Morning vs Evening</h4>
+        <div class="chart-container doughnut">
+          <canvas id="chart-period"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h4>🧷 Daily Diaper Changes</h4>
+        <div class="chart-container">
+          <canvas id="chart-diapers"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ═══════════════════════════════════════════════════
+    // SleepZzz Frontend
+    // ═══════════════════════════════════════════════════
+
+    // ── State ──────────────────────────────────────────
+    let currentDays = 7;
+    let charts = {};
+
+    // ── Tab Navigation ─────────────────────────────────
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+        if (tab.dataset.tab === 'dashboard') loadDashboard();
+      });
+    });
+
+    // ── Pill Selectors ─────────────────────────────────
+    document.querySelectorAll('.type-pills').forEach(group => {
+      group.querySelectorAll('.pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          group.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          // Toggle feed sub-sections
+          if (group.id === 'feed-type') toggleFeedSections();
+        });
+      });
+    });
+
+    // ── Feed Section Toggle ────────────────────────────
+    function toggleFeedSections() {
+      const type = getSelectedType('feed-type');
+      document.getElementById('milk-options').classList.toggle('visible', type === 'milk');
+      document.getElementById('solid-options').classList.toggle('visible', type === 'solid');
+    }
+
+    // ── Range Buttons ──────────────────────────────────
+    document.querySelectorAll('.range-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentDays = parseInt(btn.dataset.days);
+        loadDashboard();
+      });
+    });
+
+    // ── Helpers ────────────────────────────────────────
+    function getSelectedType(groupId) {
+      return document.querySelector(`#${groupId} .pill.active`)?.dataset.value;
+    }
+
+    function now() {
+      const d = new Date();
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 16);
+    }
+
+    function formatDateTime(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+        ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function formatDuration(mins) {
+      const h = Math.floor(mins / 60);
+      const m = Math.round(mins % 60);
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    async function api(path, opts = {}) {
+      const res = await fetch(path, {
+        ...opts,
+        headers: { 'Content-Type': 'application/json', ...opts.headers },
+        body: opts.body ? JSON.stringify(opts.body) : undefined,
+      });
+      return res.json();
+    }
+
+    // ── Set default times ──────────────────────────────
+    function setDefaults() {
+      document.getElementById('sleep-start').value = now();
+      document.getElementById('sleep-end').value = now();
+      document.getElementById('feed-time-milk').value = now();
+      document.getElementById('feed-time-solid').value = now();
+      document.getElementById('diaper-time').value = now();
+    }
+
+    // ═══ CRUD: Sleep ═══════════════════════════════════
+    async function addSleep() {
+      const type = getSelectedType('sleep-type');
+      const start_time = document.getElementById('sleep-start').value;
+      const end_time = document.getElementById('sleep-end').value;
+      const notes = document.getElementById('sleep-notes').value;
+
+      if (!start_time || !end_time) return showToast('⚠️ Please fill in times');
+      if (new Date(end_time) <= new Date(start_time)) return showToast('⚠️ End must be after start');
+
+      await api('/api/sleep', { method: 'POST', body: { type, start_time, end_time, notes } });
+      showToast('💤 Sleep entry saved!');
+      document.getElementById('sleep-notes').value = '';
+      setDefaults();
+      loadSleep();
+    }
+
+    async function loadSleep() {
+      const entries = await api('/api/sleep?days=30');
+      const list = document.getElementById('sleep-list');
+      if (!entries.length) {
+        list.innerHTML = '<div class="empty-state"><div class="emoji">💤</div><p>No sleep entries yet</p></div>';
+        return;
+      }
+      list.innerHTML = entries.map(e => `
+    <div class="entry-item">
+      <div class="entry-icon sleep">${e.type === 'nap' ? '🌤️' : '🌙'}</div>
+      <div class="entry-info">
+        <div class="entry-title">${e.type === 'nap' ? 'Nap' : 'Night Sleep'} — ${formatDuration(e.duration_minutes)}</div>
+        <div class="entry-meta">${formatDateTime(e.start_time)} → ${formatDateTime(e.end_time)}${e.notes ? ' · ' + e.notes : ''}</div>
+      </div>
+      <div class="entry-actions">
+        <button class="btn btn-danger" onclick="deleteSleep(${e.id})">✕</button>
+      </div>
+    </div>
+  `).join('');
+    }
+
+    async function deleteSleep(id) {
+      await api(`/api/sleep/${id}`, { method: 'DELETE' });
+      showToast('🗑️ Deleted');
+      loadSleep();
+    }
+
+    // ═══ CRUD: Feeds ═══════════════════════════════════
+    async function addFeed() {
+      const type = getSelectedType('feed-type');
+      const notes = document.getElementById('feed-notes').value;
+      let time, body;
+
+      if (type === 'milk') {
+        time = document.getElementById('feed-time-milk').value;
+        const sub_type = getSelectedType('milk-sub-type');
+        const amount_oz = parseFloat(document.getElementById('feed-amount-oz').value) || 0;
+        if (!time) return showToast('⚠️ Please set a time');
+        body = { type, time, sub_type, amount_oz, notes };
+      } else {
+        time = document.getElementById('feed-time-solid').value;
+        const category = document.getElementById('solid-category').value;
+        const amount_tsp = parseFloat(document.getElementById('feed-amount-tsp').value) || 0;
+        if (!time) return showToast('⚠️ Please set a time');
+        body = { type, time, category, amount_tsp, notes };
+      }
+
+      await api('/api/feeds', { method: 'POST', body });
+      showToast('🍼 Feed entry saved!');
+      document.getElementById('feed-amount-oz').value = '';
+      document.getElementById('feed-amount-tsp').value = '';
+      document.getElementById('feed-notes').value = '';
+      setDefaults();
+      loadFeeds();
+    }
+
+    const subTypeLabels = { formula: 'Formula', breast_milk: 'Breast Milk' };
+    const categoryIcons = {
+      fruit: '🍎', vegetable: '🥦', meat: '🍗', dairy: '🧀',
+      fish: '🐟', nuts: '🥜', grain: '🌾', egg: '🥚', other: '🥄'
+    };
+
+    async function loadFeeds() {
+      const entries = await api('/api/feeds?days=30');
+      const list = document.getElementById('feed-list');
+      if (!entries.length) {
+        list.innerHTML = '<div class="empty-state"><div class="emoji">🍼</div><p>No feed entries yet</p></div>';
+        return;
+      }
+      list.innerHTML = entries.map(e => {
+        let icon, title;
+        if (e.type === 'milk') {
+          icon = e.sub_type === 'breast_milk' ? '🤱' : '🍼';
+          const label = subTypeLabels[e.sub_type] || 'Milk';
+          title = `${label}${e.amount_oz ? ' — ' + e.amount_oz + ' oz' : ''}`;
+        } else {
+          icon = categoryIcons[e.category] || '🥣';
+          const cat = e.category ? e.category.charAt(0).toUpperCase() + e.category.slice(1) : 'Solid';
+          title = `${cat}${e.amount_tsp ? ' — ' + e.amount_tsp + ' tsp' : ''}`;
+        }
+        return `
+    <div class="entry-item">
+      <div class="entry-icon feed">${icon}</div>
+      <div class="entry-info">
+        <div class="entry-title">${title}</div>
+        <div class="entry-meta">${formatDateTime(e.time)}${e.notes ? ' · ' + e.notes : ''}</div>
+      </div>
+      <div class="entry-actions">
+        <button class="btn btn-danger" onclick="deleteFeed(${e.id})">✕</button>
+      </div>
+    </div>`;
+      }).join('');
+    }
+
+    async function deleteFeed(id) {
+      await api(`/api/feeds/${id}`, { method: 'DELETE' });
+      showToast('🗑️ Deleted');
+      loadFeeds();
+    }
+
+    // ═══ CRUD: Diapers ═════════════════════════════════
+    async function addDiaper() {
+      const type = getSelectedType('diaper-type');
+      const time = document.getElementById('diaper-time').value;
+      const notes = document.getElementById('diaper-notes').value;
+
+      if (!time) return showToast('⚠️ Please set a time');
+
+      await api('/api/diapers', { method: 'POST', body: { type, time, notes } });
+      showToast('👶 Diaper entry saved!');
+      document.getElementById('diaper-notes').value = '';
+      setDefaults();
+      loadDiapers();
+    }
+
+    async function loadDiapers() {
+      const entries = await api('/api/diapers?days=30');
+      const list = document.getElementById('diaper-list');
+      if (!entries.length) {
+        list.innerHTML = '<div class="empty-state"><div class="emoji">👶</div><p>No diaper entries yet</p></div>';
+        return;
+      }
+      const icons = { wet: '💧', dirty: '💩', both: '💧💩' };
+      list.innerHTML = entries.map(e => `
+    <div class="entry-item">
+      <div class="entry-icon diaper">${icons[e.type] || '👶'}</div>
+      <div class="entry-info">
+        <div class="entry-title">${e.type.charAt(0).toUpperCase() + e.type.slice(1)}</div>
+        <div class="entry-meta">${formatDateTime(e.time)}${e.notes ? ' · ' + e.notes : ''}</div>
+      </div>
+      <div class="entry-actions">
+        <button class="btn btn-danger" onclick="deleteDiaper(${e.id})">✕</button>
+      </div>
+    </div>
+  `).join('');
+    }
+
+    async function deleteDiaper(id) {
+      await api(`/api/diapers/${id}`, { method: 'DELETE' });
+      showToast('🗑️ Deleted');
+      loadDiapers();
+    }
+
+    // ═══ Dashboard ═════════════════════════════════════
+    async function loadDashboard() {
+      const data = await api(`/api/analytics?days=${currentDays}`);
+
+      // Summary stats
+      const hrs = (data.summary.totalSleepMinutes / 60).toFixed(1);
+      document.getElementById('stat-sleep-hours').textContent = hrs;
+      document.getElementById('stat-milk-oz').textContent = data.summary.totalMilkOz || 0;
+      document.getElementById('stat-diapers').textContent = data.summary.totalDiapers || 0;
+
+      // Build date labels
+      const dates = [];
+      for (let i = currentDays - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        dates.push(d.toISOString().slice(0, 10));
+      }
+      const dateLabels = dates.map(d => {
+        const dt = new Date(d + 'T12:00:00');
+        return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      });
+
+      // ── Sleep Chart ──────────────────────────────
+      const napData = dates.map(d => {
+        const entry = data.sleepDaily.find(e => e.date === d && e.type === 'nap');
+        return entry ? +(entry.total_minutes / 60).toFixed(2) : 0;
+      });
+      const nightData = dates.map(d => {
+        const entry = data.sleepDaily.find(e => e.date === d && e.type === 'night');
+        return entry ? +(entry.total_minutes / 60).toFixed(2) : 0;
+      });
+
+      renderChart('chart-sleep', 'bar', {
+        labels: dateLabels,
+        datasets: [
+          { label: 'Naps', data: napData, backgroundColor: 'rgba(167,139,250,0.6)', borderRadius: 6, borderSkipped: false },
+          { label: 'Night', data: nightData, backgroundColor: 'rgba(91,62,158,0.6)', borderRadius: 6, borderSkipped: false },
+        ]
+      }, { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Hours' } } } });
+
+      // ── Feed Chart ───────────────────────────────
+      const feedData = dates.map(d => {
+        return data.feedDaily
+          .filter(e => e.date === d && e.type === 'milk')
+          .reduce((sum, e) => sum + (e.total_oz || 0), 0);
+      });
+
+      renderChart('chart-feeds', 'line', {
+        labels: dateLabels,
+        datasets: [{
+          label: 'Milk (oz)',
+          data: feedData,
+          borderColor: 'rgb(110,231,183)',
+          backgroundColor: 'rgba(110,231,183,0.15)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: 'rgb(110,231,183)',
+        }]
+      }, { scales: { y: { beginAtZero: true, title: { display: true, text: 'oz' } } } });
+
+      // ── Period Doughnut ──────────────────────────
+      const morningMin = data.sleepByPeriod.find(e => e.period === 'morning')?.total_minutes || 0;
+      const eveningMin = data.sleepByPeriod.find(e => e.period === 'evening')?.total_minutes || 0;
+
+      renderChart('chart-period', 'doughnut', {
+        labels: ['Morning (6am–6pm)', 'Evening (6pm–6am)'],
+        datasets: [{
+          data: [+(morningMin / 60).toFixed(1), +(eveningMin / 60).toFixed(1)],
+          backgroundColor: ['rgba(252,211,77,0.7)', 'rgba(124,92,191,0.7)'],
+          borderWidth: 0,
+        }]
+      }, {
+        cutout: '60%',
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed + 'h' } }
+        }
+      });
+
+      // ── Diaper Chart ─────────────────────────────
+      const wetData = dates.map(d => {
+        return data.diaperDaily
+          .filter(e => e.date === d && (e.type === 'wet' || e.type === 'both'))
+          .reduce((sum, e) => sum + e.count, 0);
+      });
+      const dirtyData = dates.map(d => {
+        return data.diaperDaily
+          .filter(e => e.date === d && (e.type === 'dirty' || e.type === 'both'))
+          .reduce((sum, e) => sum + e.count, 0);
+      });
+
+      renderChart('chart-diapers', 'bar', {
+        labels: dateLabels,
+        datasets: [
+          { label: 'Wet', data: wetData, backgroundColor: 'rgba(125,211,252,0.6)', borderRadius: 6, borderSkipped: false },
+          { label: 'Dirty', data: dirtyData, backgroundColor: 'rgba(252,165,165,0.6)', borderRadius: 6, borderSkipped: false },
+        ]
+      }, { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Changes' } } } });
+    }
+
+    function renderChart(canvasId, type, data, extraOpts = {}) {
+      if (charts[canvasId]) charts[canvasId].destroy();
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      charts[canvasId] = new Chart(ctx, {
+        type,
+        data,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { font: { family: 'Nunito', weight: '600' }, padding: 12 } },
+            ...extraOpts.plugins,
+          },
+          scales: extraOpts.scales ? Object.fromEntries(
+            Object.entries(extraOpts.scales).map(([k, v]) => [k, {
+              ...v,
+              grid: { color: 'rgba(0,0,0,0.04)' },
+              ticks: { font: { family: 'Nunito', size: 11 } },
+              title: v.title ? { ...v.title, font: { family: 'Nunito', weight: '600', size: 12 } } : undefined,
+            }])
+          ) : undefined,
+          ...(['doughnut', 'pie'].includes(type) ? { cutout: extraOpts.cutout } : {}),
+        }
+      });
+    }
+
+    // ═══ Init ══════════════════════════════════════════
+    setDefaults();
+    loadSleep();
+    loadFeeds();
+    loadDiapers();
+  </script>
+
+</body>
+
+</html>
