@@ -737,6 +737,270 @@
     .btn-delete:hover {
       background: #fef2f2;
     }
+
+    /* ── Timeline ───────────────────────────── */
+    .timeline-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    .timeline-card h4 {
+      margin-bottom: 4px;
+    }
+
+    .timeline-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .timeline-legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .timeline-legend span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-swatch {
+      width: 14px;
+      height: 8px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .tl-grid {
+      display: flex;
+      gap: 0;
+    }
+
+    .tl-hour-labels {
+      display: flex;
+      flex-direction: column;
+      width: 32px;
+      flex-shrink: 0;
+      padding-top: 28px;
+    }
+
+    .tl-hour-label {
+      height: 24px;
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: right;
+      padding-right: 6px;
+      line-height: 24px;
+    }
+
+    .tl-hour-label.tl-ref {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .tl-columns {
+      display: flex;
+      flex: 1;
+      gap: 6px;
+    }
+
+    .tl-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .tl-col-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      text-align: center;
+      height: 24px;
+      line-height: 24px;
+    }
+
+    .tl-col-bar {
+      width: 100%;
+      position: relative;
+      background: var(--bg);
+      border-radius: 6px;
+      overflow: hidden;
+      /* 24 hours * 24px each */
+      height: 576px;
+      background-image: repeating-linear-gradient(180deg,
+          transparent,
+          transparent 23px,
+          rgba(0, 0, 0, 0.05) 23px,
+          rgba(0, 0, 0, 0.05) 24px);
+    }
+
+    /* 6am and 6pm lines */
+    .tl-col-bar::before,
+    .tl-col-bar::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(124, 92, 191, 0.3);
+      z-index: 4;
+    }
+
+    .tl-col-bar::before {
+      top: 144px;
+    }
+
+    /* 6h * 24px */
+    .tl-col-bar::after {
+      top: 432px;
+    }
+
+    /* 18h * 24px */
+
+    .tl-sleep-v {
+      position: absolute;
+      left: 8%;
+      width: 50%;
+      border-radius: 3px;
+      z-index: 2;
+      min-height: 2px;
+    }
+
+    .tl-sleep-v.nap {
+      background: rgba(167, 139, 250, 0.8);
+    }
+
+    .tl-sleep-v.night {
+      background: rgba(91, 62, 158, 0.8);
+    }
+
+    .tl-evt {
+      position: absolute;
+      right: 10%;
+      font-size: 0.6rem;
+      z-index: 3;
+      line-height: 1;
+      cursor: default;
+    }
+
+    /* ── Floating Action Button ──────────────── */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(124, 92, 191, 0.4);
+      z-index: 400;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .fab:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 24px rgba(124, 92, 191, 0.5);
+    }
+
+    .fab:active {
+      transform: scale(0.95);
+    }
+
+    /* ── Toggle Switch ────────────────────── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toggle-row:last-child {
+      border-bottom: none;
+    }
+
+    .toggle-label {
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .toggle-label span {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: var(--border);
+      border-radius: 13px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .toggle.active {
+      background: var(--primary);
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: white;
+      transition: transform 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle.active::after {
+      transform: translateX(22px);
+    }
+
+    .toggle-details {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      padding: 0 0;
+    }
+
+    .toggle-details.open {
+      max-height: 300px;
+      padding: 12px 0;
+    }
   </style>
 </head>
 
@@ -938,7 +1202,7 @@
       </div>
 
       <div class="chart-card">
-        <h4>🌅 Sleep: Morning vs Evening</h4>
+        <h4>🌅 Sleep: Nap vs Night</h4>
         <div class="chart-container doughnut">
           <canvas id="chart-period"></canvas>
         </div>
@@ -956,6 +1220,18 @@
         <div class="chart-container">
           <canvas id="chart-diapers"></canvas>
         </div>
+      </div>
+
+      <div class="timeline-card">
+        <h4>🕒 Daily Timeline</h4>
+        <p class="timeline-desc">Compare the last 3 days side-by-side. Sleep as bars, feeds & diapers as icons.</p>
+        <div class="timeline-legend">
+          <span><span class="legend-swatch" style="background:rgba(167,139,250,0.8)"></span> 🌤️ Nap</span>
+          <span><span class="legend-swatch" style="background:rgba(91,62,158,0.8)"></span> 🌙 Night</span>
+          <span>🍼 Feed</span>
+          <span>👶 Diaper</span>
+        </div>
+        <div id="timeline-body"></div>
       </div>
     </div>
 
@@ -1003,6 +1279,77 @@
       </div>
     </div>
   </div>
+
+  <!-- Quick Entry Modal -->
+  <div class="modal-overlay" id="quick-modal">
+    <div class="modal">
+      <h3>⚡ Quick Entry</h3>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px">Log sleep, diaper, and feeding — all in
+        one go.</p>
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label>Time</label>
+        <input type="datetime-local" id="quick-time">
+      </div>
+
+      <div class="form-group" style="margin-bottom:4px">
+        <label>Notes (optional)</label>
+        <textarea id="quick-notes" placeholder="e.g. fussy, teething" rows="2"></textarea>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="toggle-row">
+          <div class="toggle-label">💤 Going to Sleep<span>Start a new sleep session</span></div>
+          <div class="toggle" id="quick-startsleep-toggle"></div>
+        </div>
+        <div class="toggle-details" id="quick-startsleep-details">
+          <div id="quick-startsleep-info" style="font-size:0.8rem;color:var(--text-muted);padding:4px 0"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">😴 Woke Up<span>End the current sleep session</span></div>
+          <div class="toggle" id="quick-sleep-toggle"></div>
+        </div>
+        <div class="toggle-details" id="quick-sleep-details">
+          <div id="quick-sleep-info" style="font-size:0.8rem;color:var(--text-muted);padding:4px 0"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-label">👶 Diaper Change<span>Log a diaper change</span></div>
+          <div class="toggle" id="quick-diaper-toggle"></div>
+        </div>
+        <div class="toggle-details" id="quick-diaper-details">
+          <div class="type-pills" id="quick-diaper-type" style="margin-bottom:0">
+            <div class="pill active" data-value="wet">💧 Wet</div>
+            <div class="pill" data-value="dirty">💩 Dirty</div>
+            <div class="pill" data-value="both">💧💩 Both</div>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">🍼 Bottle Feed<span>Log a milk feed</span></div>
+          <div class="toggle" id="quick-feed-toggle"></div>
+        </div>
+        <div class="toggle-details" id="quick-feed-details">
+          <div class="type-pills" id="quick-feed-subtype" style="margin-bottom:8px">
+            <div class="pill active" data-value="formula">🍼 Formula</div>
+            <div class="pill" data-value="breast_milk">🤱 Breast Milk</div>
+          </div>
+          <div class="form-group">
+            <label>Amount (oz)</label>
+            <input type="number" id="quick-feed-oz" placeholder="e.g. 4" min="0" step="0.5">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn btn-secondary" onclick="closeQuickModal()">Cancel</button>
+        <button class="btn btn-primary" style="flex:2" onclick="saveQuickEntry()">⚡ Save All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" onclick="openQuickModal()" title="Quick Entry">⚡</button>
 
   <div class="toast" id="toast"></div>
 
@@ -1095,7 +1442,7 @@
       const t = document.getElementById('toast');
       t.textContent = msg;
       t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 2500);
+      setTimeout(() => t.classList.remove('show'), 4000);
     }
 
     async function api(path, opts = {}) {
@@ -1109,6 +1456,12 @@
 
     // ── Set default times ──────────────────────────────
     function setDefaults() {
+      const hour = new Date().getHours();
+      const isNight = hour >= 17 || hour < 8;
+      // Auto-select nap/night pill
+      document.querySelectorAll('#sleep-type .pill').forEach(p => {
+        p.classList.toggle('active', p.dataset.value === (isNight ? 'night' : 'nap'));
+      });
       document.getElementById('sleep-start').value = now();
       document.getElementById('sleep-end').value = now();
       document.getElementById('feed-time-milk').value = now();
@@ -1346,7 +1699,7 @@
       const eveningMin = data.sleepByPeriod.find(e => e.period === 'evening')?.total_minutes || 0;
 
       renderChart('chart-period', 'doughnut', {
-        labels: ['Morning (6am–6pm)', 'Evening (6pm–6am)'],
+        labels: ['Nap (8am–5pm)', 'Night (5pm–8am)'],
         datasets: [{
           data: [+(morningMin / 60).toFixed(1), +(eveningMin / 60).toFixed(1)],
           backgroundColor: ['rgba(252,211,77,0.7)', 'rgba(124,92,191,0.7)'],
@@ -1397,6 +1750,98 @@
           { label: 'Dirty', data: dirtyData, backgroundColor: 'rgba(252,165,165,0.6)', borderRadius: 6, borderSkipped: false },
         ]
       }, { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Changes' } } } });
+
+      // ── Timeline ───────────────────────────────────
+      const [sleepRaw, feedRaw, diaperRaw] = await Promise.all([
+        api(`/api/sleep?days=${currentDays}`),
+        api(`/api/feeds?days=${currentDays}`),
+        api(`/api/diapers?days=${currentDays}`),
+      ]);
+      renderTimeline(dates, sleepRaw, feedRaw, diaperRaw);
+    }
+
+    function renderTimeline(dates, sleepEntries, feedEntries, diaperEntries) {
+      const body = document.getElementById('timeline-body');
+      const PX_PER_HOUR = 24;
+      const TOTAL_H = 24 * PX_PER_HOUR; // 576px
+
+      // Only show last 3 days
+      const days = dates.slice(-3);
+
+      function dateKey(iso) {
+        return new Date(iso).toISOString().slice(0, 10);
+      }
+
+      function minuteOfDay(iso) {
+        const d = new Date(iso);
+        return d.getHours() * 60 + d.getMinutes();
+      }
+
+      function px(minutes) {
+        return ((minutes / (24 * 60)) * TOTAL_H).toFixed(1) + 'px';
+      }
+
+      // Hour labels
+      const hours = [];
+      for (let h = 0; h < 24; h++) {
+        const label = h === 0 ? '12a' : h < 12 ? h + 'a' : h === 12 ? '12p' : (h - 12) + 'p';
+        const isRef = h === 6 || h === 18;
+        hours.push(`<div class="tl-hour-label${isRef ? ' tl-ref' : ''}">${label}</div>`);
+      }
+
+      // Build columns
+      const columns = days.map(date => {
+        const dt = new Date(date + 'T12:00:00');
+        const dayLabel = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+        // Sleep bars
+        const sleepBars = sleepEntries
+          .filter(e => dateKey(e.start_time) === date || dateKey(e.end_time) === date)
+          .map(e => {
+            const start = new Date(e.start_time);
+            const end = new Date(e.end_time);
+            const dayStart = new Date(date + 'T00:00:00');
+            const dayEnd = new Date(date + 'T23:59:59');
+            const clampStart = start < dayStart ? dayStart : start;
+            const clampEnd = end > dayEnd ? dayEnd : end;
+            const startMin = clampStart.getHours() * 60 + clampStart.getMinutes();
+            const endMin = clampEnd.getHours() * 60 + clampEnd.getMinutes();
+            if (endMin <= startMin) return '';
+            const dur = formatDuration(endMin - startMin);
+            const typeLabel = e.type === 'nap' ? '🌤️ Nap' : '🌙 Night';
+            const timeRange = formatDateTime(e.start_time) + ' – ' + formatDateTime(e.end_time);
+            return `<div class="tl-sleep-v ${e.type}" style="top:${px(startMin)};height:${px(endMin - startMin)}" title="${e.type}: ${dur}" onclick="showToast('${typeLabel}: ${dur} (${timeRange})')"></div>`;
+          }).join('');
+
+        // Feed markers
+        const feedMarkers = feedEntries
+          .filter(e => dateKey(e.time) === date)
+          .map(e => {
+            const min = minuteOfDay(e.time);
+            const tip = e.type === 'milk' ? `${e.amount_oz || 0}oz ${e.sub_type || ''}`.trim() : `${e.amount_tsp || 0}tsp`;
+            const time = formatDateTime(e.time);
+            return `<div class="tl-evt" style="top:${px(min)}" title="Feed: ${tip}" onclick="showToast('🍼 Feed: ${tip} at ${time}')">🍼</div>`;
+          }).join('');
+
+        // Diaper markers
+        const diaperMarkers = diaperEntries
+          .filter(e => dateKey(e.time) === date)
+          .map(e => {
+            const min = minuteOfDay(e.time);
+            const time = formatDateTime(e.time);
+            return `<div class="tl-evt" style="top:${px(min)}" title="Diaper: ${e.type}" onclick="showToast('👶 Diaper: ${e.type} at ${time}')">👶</div>`;
+          }).join('');
+
+        return `<div class="tl-col">
+          <div class="tl-col-header">${dayLabel}</div>
+          <div class="tl-col-bar">${sleepBars}${feedMarkers}${diaperMarkers}</div>
+        </div>`;
+      }).join('');
+
+      body.innerHTML = `<div class="tl-grid">
+        <div class="tl-hour-labels">${hours.join('')}</div>
+        <div class="tl-columns">${columns}</div>
+      </div>`;
     }
 
     function renderChart(canvasId, type, data, extraOpts = {}) {
@@ -1688,6 +2133,160 @@
       showToast('🗑️ Entry deleted');
       closeEditModal();
       loadHistory();
+      loadSleep(); loadFeeds(); loadDiapers();
+    }
+
+    // ═══ Quick Entry ════════════════════════════════════
+    let lastSleepEntry = null;
+
+    // Toggle switches (generic)
+    document.querySelectorAll('#quick-modal .toggle').forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const id = toggle.id;
+        // Mutually exclusive: start sleep and woke up
+        if (id === 'quick-startsleep-toggle' && !toggle.classList.contains('active')) {
+          document.getElementById('quick-sleep-toggle').classList.remove('active');
+          document.getElementById('quick-sleep-details').classList.remove('open');
+        } else if (id === 'quick-sleep-toggle' && !toggle.classList.contains('active')) {
+          document.getElementById('quick-startsleep-toggle').classList.remove('active');
+          document.getElementById('quick-startsleep-details').classList.remove('open');
+        }
+        toggle.classList.toggle('active');
+        const details = toggle.parentElement.nextElementSibling;
+        details.classList.toggle('open');
+      });
+    });
+
+    // Pill selectors inside quick modal
+    document.querySelectorAll('#quick-modal .type-pills').forEach(group => {
+      group.querySelectorAll('.pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          group.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+        });
+      });
+    });
+
+    // Close on overlay click
+    document.getElementById('quick-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'quick-modal') closeQuickModal();
+    });
+
+    function isNightTime(timeStr) {
+      const h = timeStr ? new Date(timeStr).getHours() : new Date().getHours();
+      return h >= 17 || h < 8;
+    }
+
+    async function openQuickModal() {
+      const t = now();
+      document.getElementById('quick-time').value = t;
+      document.getElementById('quick-notes').value = '';
+      document.getElementById('quick-feed-oz').value = '';
+
+      // Reset all toggles off
+      ['quick-startsleep-toggle', 'quick-sleep-toggle', 'quick-diaper-toggle', 'quick-feed-toggle'].forEach(id => {
+        document.getElementById(id).classList.remove('active');
+      });
+      ['quick-startsleep-details', 'quick-sleep-details', 'quick-diaper-details', 'quick-feed-details'].forEach(id => {
+        document.getElementById(id).classList.remove('open');
+      });
+
+      // Reset pills to defaults
+      document.querySelectorAll('#quick-diaper-type .pill').forEach((p, i) => p.classList.toggle('active', i === 0));
+      document.querySelectorAll('#quick-feed-subtype .pill').forEach((p, i) => p.classList.toggle('active', i === 0));
+
+      // Start sleep info
+      const sleepType = isNightTime(t) ? '🌙 Night' : '🌤️ Nap';
+      document.getElementById('quick-startsleep-info').innerHTML = `Will start: <strong>${sleepType}</strong> at <strong>${formatDateTime(t)}</strong>`;
+
+      // Show modal
+      document.getElementById('quick-modal').classList.add('visible');
+
+      // Find the most recent sleep entry for "Woke Up"
+      const infoEl = document.getElementById('quick-sleep-info');
+      infoEl.textContent = 'Loading...';
+      try {
+        const entries = await api('/api/sleep?days=3');
+        if (entries.length > 0) {
+          lastSleepEntry = entries[0];
+          const type = lastSleepEntry.type === 'nap' ? '🌤️ Nap' : '🌙 Night';
+          infoEl.innerHTML = `Will end: <strong>${type}</strong> started at <strong>${formatDateTime(lastSleepEntry.start_time)}</strong>`;
+        } else {
+          lastSleepEntry = null;
+          infoEl.textContent = 'No recent sleep entry found';
+        }
+      } catch {
+        lastSleepEntry = null;
+        infoEl.textContent = 'Could not load sleep entries';
+      }
+    }
+
+    function closeQuickModal() {
+      document.getElementById('quick-modal').classList.remove('visible');
+    }
+
+    async function saveQuickEntry() {
+      const time = document.getElementById('quick-time').value;
+      if (!time) return showToast('⚠️ Please set a time');
+
+      const notes = document.getElementById('quick-notes').value;
+      const startSleepOn = document.getElementById('quick-startsleep-toggle').classList.contains('active');
+      const sleepOn = document.getElementById('quick-sleep-toggle').classList.contains('active');
+      const diaperOn = document.getElementById('quick-diaper-toggle').classList.contains('active');
+      const feedOn = document.getElementById('quick-feed-toggle').classList.contains('active');
+
+      const promises = [];
+      let count = 0;
+
+      // Start new sleep entry
+      if (startSleepOn) {
+        const sleepType = isNightTime(time) ? 'night' : 'nap';
+        promises.push(api('/api/sleep', {
+          method: 'POST',
+          body: {
+            type: sleepType,
+            start_time: time,
+            end_time: time,
+            notes: notes ? 'Quick: ' + notes : '',
+          }
+        }));
+        count++;
+      }
+
+      // End sleep entry
+      if (sleepOn && lastSleepEntry) {
+        promises.push(api(`/api/sleep/${lastSleepEntry.id}`, {
+          method: 'PUT',
+          body: {
+            type: lastSleepEntry.type,
+            start_time: lastSleepEntry.start_time,
+            end_time: time,
+            notes: lastSleepEntry.notes ? lastSleepEntry.notes + (notes ? ' | Quick: ' + notes : '') : (notes ? 'Quick: ' + notes : ''),
+          }
+        }));
+        count++;
+      }
+
+      // Diaper entry
+      if (diaperOn) {
+        const diaperType = document.querySelector('#quick-diaper-type .pill.active')?.dataset.value || 'wet';
+        promises.push(api('/api/diapers', { method: 'POST', body: { type: diaperType, time, notes: notes ? 'Quick: ' + notes : '' } }));
+        count++;
+      }
+
+      // Feed entry
+      if (feedOn) {
+        const subType = document.querySelector('#quick-feed-subtype .pill.active')?.dataset.value || 'formula';
+        const oz = parseFloat(document.getElementById('quick-feed-oz').value) || 0;
+        promises.push(api('/api/feeds', { method: 'POST', body: { type: 'milk', time, sub_type: subType, amount_oz: oz, notes: notes ? 'Quick: ' + notes : '' } }));
+        count++;
+      }
+
+      if (count === 0) return showToast('⚠️ Toggle at least one option');
+
+      await Promise.all(promises);
+      showToast(`⚡ ${count} entr${count === 1 ? 'y' : 'ies'} saved!`);
+      closeQuickModal();
       loadSleep(); loadFeeds(); loadDiapers();
     }
   </script>

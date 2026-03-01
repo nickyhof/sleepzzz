@@ -164,11 +164,11 @@ async function getAnalytics(db, days) {
     ORDER BY date
   `).bind(days).all();
 
-    // Sleep by time of day (morning = 6am-6pm, evening = 6pm-6am)
+    // Sleep by time of day (nap = 8am-5pm, night = 5pm-8am)
     const { results: sleepByPeriod } = await db.prepare(`
     SELECT
       CASE
-        WHEN CAST(strftime('%H', start_time) AS INTEGER) BETWEEN 6 AND 17 THEN 'morning'
+        WHEN CAST(strftime('%H', start_time) AS INTEGER) BETWEEN 8 AND 16 THEN 'morning'
         ELSE 'evening'
       END as period,
       SUM(duration_minutes) as total_minutes
@@ -193,7 +193,7 @@ async function getAnalytics(db, days) {
     const { results: feedByPeriod } = await db.prepare(`
     SELECT
       CASE
-        WHEN CAST(strftime('%H', time) AS INTEGER) BETWEEN 6 AND 17 THEN 'morning'
+        WHEN CAST(strftime('%H', time) AS INTEGER) BETWEEN 8 AND 16 THEN 'morning'
         ELSE 'evening'
       END as period,
       SUM(amount_oz) as total_oz,
