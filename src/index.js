@@ -10,7 +10,7 @@ export default {
         // CORS headers for API
         const corsHeaders = {
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type',
         };
 
@@ -59,6 +59,16 @@ async function handleAPI(path, method, request, env) {
         return { id: meta.last_row_id, success: true };
     }
 
+    if (path.startsWith('/api/sleep/') && method === 'PUT') {
+        const id = path.split('/').pop();
+        const body = await request.json();
+        const duration = calcMinutes(body.start_time, body.end_time);
+        await db.prepare(
+            `UPDATE sleep_entries SET type=?, start_time=?, end_time=?, duration_minutes=?, notes=? WHERE id=?`
+        ).bind(body.type, body.start_time, body.end_time, duration, body.notes || '', id).run();
+        return { success: true };
+    }
+
     if (path.startsWith('/api/sleep/') && method === 'DELETE') {
         const id = path.split('/').pop();
         await db.prepare('DELETE FROM sleep_entries WHERE id = ?').bind(id).run();
@@ -86,6 +96,15 @@ async function handleAPI(path, method, request, env) {
         return { id: meta.last_row_id, success: true };
     }
 
+    if (path.startsWith('/api/feeds/') && method === 'PUT') {
+        const id = path.split('/').pop();
+        const body = await request.json();
+        await db.prepare(
+            `UPDATE feed_entries SET type=?, time=?, amount_oz=?, amount_tsp=?, sub_type=?, category=?, notes=? WHERE id=?`
+        ).bind(body.type, body.time, body.amount_oz || 0, body.amount_tsp || 0, body.sub_type || '', body.category || '', body.notes || '', id).run();
+        return { success: true };
+    }
+
     if (path.startsWith('/api/feeds/') && method === 'DELETE') {
         const id = path.split('/').pop();
         await db.prepare('DELETE FROM feed_entries WHERE id = ?').bind(id).run();
@@ -107,6 +126,15 @@ async function handleAPI(path, method, request, env) {
             `INSERT INTO diaper_entries (type, time, notes) VALUES (?, ?, ?)`
         ).bind(body.type, body.time, body.notes || '').run();
         return { id: meta.last_row_id, success: true };
+    }
+
+    if (path.startsWith('/api/diapers/') && method === 'PUT') {
+        const id = path.split('/').pop();
+        const body = await request.json();
+        await db.prepare(
+            `UPDATE diaper_entries SET type=?, time=?, notes=? WHERE id=?`
+        ).bind(body.type, body.time, body.notes || '', id).run();
+        return { success: true };
     }
 
     if (path.startsWith('/api/diapers/') && method === 'DELETE') {

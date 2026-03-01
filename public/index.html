@@ -583,6 +583,160 @@
       overflow-x: hidden;
       max-width: 100vw;
     }
+
+    /* ── History Table ───────────────────────────── */
+    .search-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .search-bar input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.9rem;
+      background: var(--bg);
+      transition: var(--transition);
+    }
+
+    .search-bar input:focus {
+      outline: none;
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(124, 92, 191, 0.12);
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    .history-table th {
+      text-align: left;
+      padding: 10px 8px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .history-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .history-table tr {
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .history-table tbody tr:hover {
+      background: rgba(124, 92, 191, 0.04);
+    }
+
+    .history-count {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .type-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .type-badge.sleep {
+      background: rgba(167, 139, 250, 0.15);
+      color: #7c5cbf;
+    }
+
+    .type-badge.feed {
+      background: rgba(110, 231, 183, 0.15);
+      color: #059669;
+    }
+
+    .type-badge.diaper {
+      background: rgba(252, 211, 77, 0.15);
+      color: #b45309;
+    }
+
+    /* ── Edit Modal ──────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 500;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .modal-overlay.visible {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal h3 {
+      font-size: 1rem;
+      margin-bottom: 16px;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .modal-actions .btn {
+      flex: 1;
+    }
+
+    .btn-secondary {
+      background: var(--bg);
+      color: var(--text);
+      border: 2px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--primary-light);
+    }
+
+    .btn-delete {
+      background: none;
+      color: #ef4444;
+      border: 2px solid #fca5a5;
+    }
+
+    .btn-delete:hover {
+      background: #fef2f2;
+    }
   </style>
 </head>
 
@@ -605,6 +759,9 @@
     </div>
     <div class="tab" data-tab="dashboard">
       <span class="tab-icon">📊</span> Dashboard
+    </div>
+    <div class="tab" data-tab="history">
+      <span class="tab-icon">📋</span> History
     </div>
   </nav>
 
@@ -802,6 +959,49 @@
       </div>
     </div>
 
+    <!-- ═══ HISTORY PANEL ═══ -->
+    <div class="panel" id="panel-history">
+      <div class="card">
+        <h3>📋 All Entries</h3>
+        <div class="type-pills" id="history-filter" style="margin-bottom:12px">
+          <div class="pill active" data-value="all">📝 All</div>
+          <div class="pill" data-value="sleep">😴 Sleep</div>
+          <div class="pill" data-value="feed">🍼 Feed</div>
+          <div class="pill" data-value="diaper">👶 Diaper</div>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="history-search" placeholder="🔍 Search entries...">
+        </div>
+        <div class="history-count" id="history-count"></div>
+        <div style="overflow-x:auto">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Date / Time</th>
+                <th>Details</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal">
+      <h3 id="edit-modal-title">✏️ Edit Entry</h3>
+      <div id="edit-modal-body"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button class="btn btn-delete" onclick="deleteFromModal()">🗑️ Delete</button>
+        <button class="btn btn-primary" style="flex:2" onclick="saveEdit()">✨ Save</button>
+      </div>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -823,6 +1023,7 @@
         tab.classList.add('active');
         document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
         if (tab.dataset.tab === 'dashboard') loadDashboard();
+        if (tab.dataset.tab === 'history') loadHistory();
       });
     });
 
@@ -1229,6 +1430,266 @@
     loadSleep();
     loadFeeds();
     loadDiapers();
+
+    // ═══ History ═══════════════════════════════════════
+    let allHistoryEntries = [];
+    let editingEntry = null;
+
+    // History filter pills
+    document.querySelectorAll('#history-filter .pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('#history-filter .pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        renderHistory();
+      });
+    });
+
+    // Search debounce
+    document.getElementById('history-search').addEventListener('input', debounce(renderHistory, 200));
+
+    function debounce(fn, ms) {
+      let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+    }
+
+    async function loadHistory() {
+      const [sleep, feeds, diapers] = await Promise.all([
+        api('/api/sleep?days=365'),
+        api('/api/feeds?days=365'),
+        api('/api/diapers?days=365'),
+      ]);
+
+      allHistoryEntries = [
+        ...sleep.map(e => ({
+          ...e, _type: 'sleep',
+          _time: e.start_time,
+          _details: `${e.type === 'nap' ? 'Nap' : 'Night'} — ${formatDuration(e.duration_minutes)}`,
+          _search: `sleep ${e.type} ${e.notes || ''} ${formatDateTime(e.start_time)}`.toLowerCase(),
+        })),
+        ...feeds.map(e => {
+          let detail;
+          if (e.type === 'milk') {
+            const label = subTypeLabels[e.sub_type] || 'Milk';
+            detail = `${label}${e.amount_oz ? ' — ' + e.amount_oz + ' oz' : ''}`;
+          } else {
+            const cats = e.category ? e.category.split(',').map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ') : 'Solid';
+            detail = `${cats}${e.amount_tsp ? ' — ' + e.amount_tsp + ' tsp' : ''}`;
+          }
+          return {
+            ...e, _type: 'feed',
+            _time: e.time,
+            _details: detail,
+            _search: `feed ${e.type} ${e.sub_type || ''} ${e.category || ''} ${e.notes || ''} ${formatDateTime(e.time)}`.toLowerCase(),
+          };
+        }),
+        ...diapers.map(e => ({
+          ...e, _type: 'diaper',
+          _time: e.time,
+          _details: e.type.charAt(0).toUpperCase() + e.type.slice(1),
+          _search: `diaper ${e.type} ${e.notes || ''} ${formatDateTime(e.time)}`.toLowerCase(),
+        })),
+      ].sort((a, b) => new Date(b._time) - new Date(a._time));
+
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const filter = document.querySelector('#history-filter .pill.active')?.dataset.value || 'all';
+      const search = document.getElementById('history-search').value.toLowerCase().trim();
+
+      let entries = allHistoryEntries;
+      if (filter !== 'all') entries = entries.filter(e => e._type === filter);
+      if (search) entries = entries.filter(e => e._search.includes(search));
+
+      document.getElementById('history-count').textContent = `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}`;
+
+      const body = document.getElementById('history-body');
+      if (!entries.length) {
+        body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">No entries found</td></tr>';
+        return;
+      }
+
+      body.innerHTML = entries.map(e => `
+        <tr onclick="openEditModal('${e._type}', ${e.id})">
+          <td><span class="type-badge ${e._type}">${e._type === 'sleep' ? '😴' : e._type === 'feed' ? '🍼' : '👶'} ${e._type}</span></td>
+          <td>${formatDateTime(e._time)}</td>
+          <td>${e._details}</td>
+          <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.notes || '—'}</td>
+        </tr>
+      `).join('');
+    }
+
+    // ── Edit Modal ───────────────────────────────────
+    const allCategories = ['fruit', 'vegetable', 'meat', 'dairy', 'fish', 'nuts', 'grain', 'egg', 'other'];
+    const catEmojis = { fruit: '🍎', vegetable: '🥦', meat: '🍗', dairy: '🧀', fish: '🐟', nuts: '🥜', grain: '🌾', egg: '🥚', other: '🥄' };
+
+    function makePills(id, options, selected) {
+      return `<div class="type-pills" id="${id}" style="margin-bottom:12px">${options.map(o =>
+        `<div class="pill${o.value === selected ? ' active' : ''}" data-value="${o.value}">${o.label}</div>`
+      ).join('')}</div>`;
+    }
+
+    function makeCategoryPills(id, selectedStr) {
+      const selected = selectedStr ? selectedStr.split(',') : [];
+      return `<div class="form-group" style="margin-bottom:12px"><label>Categories (select all that apply)</label>
+        <div class="category-pills" id="${id}">${allCategories.map(c =>
+        `<div class="category-pill${selected.includes(c) ? ' active' : ''}" data-value="${c}">${catEmojis[c]} ${c.charAt(0).toUpperCase() + c.slice(1)}</div>`
+      ).join('')}</div></div>`;
+    }
+
+    function initModalPills() {
+      // Single-select pills in modal
+      document.querySelectorAll('#edit-modal .type-pills').forEach(group => {
+        group.querySelectorAll('.pill').forEach(pill => {
+          pill.addEventListener('click', () => {
+            group.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+          });
+        });
+      });
+      // Multi-select category pills in modal
+      document.querySelectorAll('#edit-modal .category-pill').forEach(pill => {
+        pill.addEventListener('click', () => pill.classList.toggle('active'));
+      });
+    }
+
+    function getModalPillValue(id) {
+      return document.querySelector(`#${id} .pill.active`)?.dataset.value;
+    }
+
+    function getModalCategories(id) {
+      return Array.from(document.querySelectorAll(`#${id} .category-pill.active`)).map(p => p.dataset.value).join(',');
+    }
+
+    function openEditModal(type, id) {
+      const entry = allHistoryEntries.find(e => e._type === type && e.id === id);
+      if (!entry) return;
+      editingEntry = { ...entry };
+
+      const icons = { sleep: '😴', feed: '🍼', diaper: '👶' };
+      document.getElementById('edit-modal-title').textContent = `${icons[type]} Edit ${type.charAt(0).toUpperCase() + type.slice(1)} Entry`;
+
+      let html = '';
+      if (type === 'sleep') {
+        html = `
+          <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Type</label>
+          ${makePills('edit-sleep-type', [
+          { value: 'nap', label: '🌤️ Nap' },
+          { value: 'night', label: '🌙 Night' },
+        ], entry.type)}
+          <div class="form-row">
+            <div class="form-group"><label>Start</label><input type="datetime-local" id="edit-sleep-start" value="${entry.start_time}"></div>
+            <div class="form-group"><label>End</label><input type="datetime-local" id="edit-sleep-end" value="${entry.end_time}"></div>
+          </div>
+          <div class="form-group" style="margin-top:12px"><label>Notes</label><textarea id="edit-sleep-notes">${entry.notes || ''}</textarea></div>
+        `;
+      } else if (type === 'feed') {
+        if (entry.type === 'milk') {
+          html = `
+            <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Sub-type</label>
+            ${makePills('edit-feed-subtype', [
+            { value: 'formula', label: '🍼 Formula' },
+            { value: 'breast_milk', label: '🤱 Breast Milk' },
+          ], entry.sub_type)}
+            <div class="form-row">
+              <div class="form-group"><label>Time</label><input type="datetime-local" id="edit-feed-time" value="${entry.time}"></div>
+              <div class="form-group"><label>Amount (oz)</label><input type="number" id="edit-feed-oz" value="${entry.amount_oz || ''}" step="0.5" min="0"></div>
+            </div>
+            <div class="form-group" style="margin-top:12px"><label>Notes</label><textarea id="edit-feed-notes">${entry.notes || ''}</textarea></div>
+          `;
+        } else {
+          html = `
+            ${makeCategoryPills('edit-feed-categories', entry.category)}
+            <div class="form-row">
+              <div class="form-group"><label>Time</label><input type="datetime-local" id="edit-feed-time" value="${entry.time}"></div>
+              <div class="form-group"><label>Amount (tsp)</label><input type="number" id="edit-feed-tsp" value="${entry.amount_tsp || ''}" step="0.5" min="0"></div>
+            </div>
+            <div class="form-group" style="margin-top:12px"><label>Notes</label><textarea id="edit-feed-notes">${entry.notes || ''}</textarea></div>
+          `;
+        }
+      } else {
+        html = `
+          <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Type</label>
+          ${makePills('edit-diaper-type', [
+          { value: 'wet', label: '💧 Wet' },
+          { value: 'dirty', label: '💩 Dirty' },
+          { value: 'both', label: '💧💩 Both' },
+        ], entry.type)}
+          <div class="form-group" style="margin-bottom:12px"><label>Time</label><input type="datetime-local" id="edit-diaper-time" value="${entry.time}"></div>
+          <div class="form-group"><label>Notes</label><textarea id="edit-diaper-notes">${entry.notes || ''}</textarea></div>
+        `;
+      }
+
+      document.getElementById('edit-modal-body').innerHTML = html;
+      initModalPills();
+      document.getElementById('edit-modal').classList.add('visible');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.remove('visible');
+      editingEntry = null;
+    }
+
+    // Close modal on overlay click
+    document.getElementById('edit-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'edit-modal') closeEditModal();
+    });
+
+    async function saveEdit() {
+      if (!editingEntry) return;
+      const { _type, id } = editingEntry;
+      let body;
+
+      if (_type === 'sleep') {
+        body = {
+          type: getModalPillValue('edit-sleep-type'),
+          start_time: document.getElementById('edit-sleep-start').value,
+          end_time: document.getElementById('edit-sleep-end').value,
+          notes: document.getElementById('edit-sleep-notes').value,
+        };
+      } else if (_type === 'feed') {
+        if (editingEntry.type === 'milk') {
+          body = {
+            type: 'milk',
+            time: document.getElementById('edit-feed-time').value,
+            sub_type: getModalPillValue('edit-feed-subtype'),
+            amount_oz: parseFloat(document.getElementById('edit-feed-oz').value) || 0,
+            notes: document.getElementById('edit-feed-notes').value,
+          };
+        } else {
+          body = {
+            type: 'solid',
+            time: document.getElementById('edit-feed-time').value,
+            category: getModalCategories('edit-feed-categories'),
+            amount_tsp: parseFloat(document.getElementById('edit-feed-tsp').value) || 0,
+            notes: document.getElementById('edit-feed-notes').value,
+          };
+        }
+      } else {
+        body = {
+          type: getModalPillValue('edit-diaper-type'),
+          time: document.getElementById('edit-diaper-time').value,
+          notes: document.getElementById('edit-diaper-notes').value,
+        };
+      }
+
+      const endpoint = _type === 'sleep' ? 'sleep' : _type === 'feed' ? 'feeds' : 'diapers';
+      await api(`/api/${endpoint}/${id}`, { method: 'PUT', body });
+      showToast('✅ Entry updated!');
+      closeEditModal();
+      loadHistory();
+      loadSleep(); loadFeeds(); loadDiapers();
+    }
+
+    async function deleteFromModal() {
+      if (!editingEntry) return;
+      const { _type, id } = editingEntry;
+      const endpoint = _type === 'sleep' ? 'sleep' : _type === 'feed' ? 'feeds' : 'diapers';
+      await api(`/api/${endpoint}/${id}`, { method: 'DELETE' });
+      showToast('🗑️ Entry deleted');
+      closeEditModal();
+      loadHistory();
+      loadSleep(); loadFeeds(); loadDiapers();
+    }
   </script>
 
 </body>
