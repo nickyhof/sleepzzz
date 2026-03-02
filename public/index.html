@@ -990,6 +990,11 @@
       transform: translateX(22px);
     }
 
+    .toggle.auto {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
     .toggle-details {
       overflow: hidden;
       max-height: 0;
@@ -1167,6 +1172,8 @@
     <!-- ═══ DASHBOARD PANEL ═══ -->
     <div class="panel" id="panel-dashboard">
       <div class="range-selector">
+        <button class="range-btn" data-days="1">Today</button>
+        <button class="range-btn" data-days="2">Yesterday</button>
         <button class="range-btn active" data-days="7">7 Days</button>
         <button class="range-btn" data-days="14">14 Days</button>
         <button class="range-btn" data-days="30">30 Days</button>
@@ -1195,6 +1202,7 @@
           <span><span class="legend-swatch" style="background:rgba(91,62,158,0.8)"></span> 🌙 Night</span>
           <span>🍼 Feed</span>
           <span>👶 Diaper</span>
+          <span>⏰ Wake-up</span>
         </div>
         <div id="timeline-body"></div>
       </div>
@@ -1313,6 +1321,15 @@
         <div class="toggle-details" id="quick-sleep-details">
           <div id="quick-sleep-info" style="font-size:0.8rem;color:var(--text-muted);padding:4px 0"></div>
         </div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">👤 Brief Wake-Up<span>Track a stir without ending sleep</span></div>
+          <div class="toggle" id="quick-brief-toggle"></div>
+        </div>
+        <div class="toggle-details" id="quick-brief-details">
+          <div id="quick-brief-info" style="font-size:0.8rem;color:var(--text-muted);padding:4px 0"></div>
+        </div>
+
         <div class="toggle-row">
           <div class="toggle-label">👶 Diaper Change<span>Log a diaper change</span></div>
           <div class="toggle" id="quick-diaper-toggle"></div>
@@ -1752,15 +1769,16 @@
       }, { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Changes' } } } });
 
       // ── Timeline ───────────────────────────────────
-      const [sleepRaw, feedRaw, diaperRaw] = await Promise.all([
+      const [sleepRaw, feedRaw, diaperRaw, wakeupRaw] = await Promise.all([
         api(`/api/sleep?days=${currentDays}`),
         api(`/api/feeds?days=${currentDays}`),
         api(`/api/diapers?days=${currentDays}`),
+        api(`/api/wakeups?days=${currentDays}`),
       ]);
-      renderTimeline(dates, sleepRaw, feedRaw, diaperRaw);
+      renderTimeline(dates, sleepRaw, feedRaw, diaperRaw, wakeupRaw);
     }
 
-    function renderTimeline(dates, sleepEntries, feedEntries, diaperEntries) {
+    function renderTimeline(dates, sleepEntries, feedEntries, diaperEntries, wakeupEntries = []) {
       const body = document.getElementById('timeline-body');
       const PX_PER_HOUR = 24;
       const TOTAL_H = 24 * PX_PER_HOUR; // 576px
@@ -1832,9 +1850,19 @@
             return `<div class="tl-evt" style="top:${px(min)}" title="Diaper: ${e.type}" onclick="showToast('👶 Diaper: ${e.type} at ${time}')">👶</div>`;
           }).join('');
 
+        // Wake-up markers
+        const wakeupMarkers = wakeupEntries
+          .filter(e => dateKey(e.time) === date)
+          .map(e => {
+            const min = minuteOfDay(e.time);
+            const time = formatDateTime(e.time);
+            const note = e.notes ? ` — ${e.notes}` : '';
+            return `<div class="tl-evt" style="top:${px(min)}" title="Woke briefly${note}" onclick="showToast('⏰ Woke briefly at ${time}${note}')">⏰</div>`;
+          }).join('');
+
         return `<div class="tl-col">
           <div class="tl-col-header">${dayLabel}</div>
-          <div class="tl-col-bar">${sleepBars}${feedMarkers}${diaperMarkers}</div>
+          <div class="tl-col-bar">${sleepBars}${feedMarkers}${diaperMarkers}${wakeupMarkers}</div>
         </div>`;
       }).join('');
 
@@ -2140,20 +2168,61 @@
     let lastSleepEntry = null;
 
     // Toggle switches (generic)
+    const sleepToggles = ['quick-startsleep-toggle', 'quick-sleep-toggle', 'quick-brief-toggle'];
+    const briefRow = document.getElementById('quick-brief-toggle').closest('.toggle-row');
+    const briefDetailsEl = document.getElementById('quick-brief-details');
+
+    function updateBriefVisibility() {
+      const startOn = document.getElementById('quick-startsleep-toggle').classList.contains('active');
+      const wokeOn = document.getElementById('quick-sleep-toggle').classList.contains('active');
+      const briefToggle = document.getElementById('quick-brief-toggle');
+      if (startOn || wokeOn) {
+        briefRow.style.display = 'none';
+        briefDetailsEl.style.display = 'none';
+        briefToggle.classList.remove('active', 'auto');
+        briefDetailsEl.classList.remove('open');
+      } else {
+        briefRow.style.display = '';
+        briefDetailsEl.style.display = '';
+      }
+    }
+
     document.querySelectorAll('#quick-modal .toggle').forEach(toggle => {
       toggle.addEventListener('click', () => {
         const id = toggle.id;
-        // Mutually exclusive: start sleep and woke up
-        if (id === 'quick-startsleep-toggle' && !toggle.classList.contains('active')) {
-          document.getElementById('quick-sleep-toggle').classList.remove('active');
-          document.getElementById('quick-sleep-details').classList.remove('open');
-        } else if (id === 'quick-sleep-toggle' && !toggle.classList.contains('active')) {
-          document.getElementById('quick-startsleep-toggle').classList.remove('active');
-          document.getElementById('quick-startsleep-details').classList.remove('open');
+        const briefToggle = document.getElementById('quick-brief-toggle');
+
+        // Don't allow manual toggling of brief when it's auto-selected by feed/diaper
+        if (id === 'quick-brief-toggle' && briefToggle.classList.contains('auto')) return;
+
+        // Mutually exclusive: all three sleep toggles
+        if (sleepToggles.includes(id) && !toggle.classList.contains('active')) {
+          sleepToggles.filter(t => t !== id).forEach(t => {
+            document.getElementById(t).classList.remove('active');
+            document.getElementById(t.replace('-toggle', '-details')).classList.remove('open');
+          });
         }
         toggle.classList.toggle('active');
         const details = toggle.parentElement.nextElementSibling;
         details.classList.toggle('open');
+
+        // Update brief visibility based on sleep toggle state
+        updateBriefVisibility();
+
+        // Auto-select brief wake-up when feed or diaper is on (only if brief is visible)
+        const feedOn = document.getElementById('quick-feed-toggle').classList.contains('active');
+        const diaperOn = document.getElementById('quick-diaper-toggle').classList.contains('active');
+        const startOn = document.getElementById('quick-startsleep-toggle').classList.contains('active');
+        const wokeOn = document.getElementById('quick-sleep-toggle').classList.contains('active');
+        if ((feedOn || diaperOn) && !startOn && !wokeOn) {
+          briefToggle.classList.add('active', 'auto');
+          briefDetailsEl.classList.add('open');
+        } else if (!feedOn && !diaperOn) {
+          if (briefToggle.classList.contains('auto')) {
+            briefToggle.classList.remove('active', 'auto');
+            briefDetailsEl.classList.remove('open');
+          }
+        }
       });
     });
 
@@ -2184,10 +2253,10 @@
       document.getElementById('quick-feed-oz').value = '';
 
       // Reset all toggles off
-      ['quick-startsleep-toggle', 'quick-sleep-toggle', 'quick-diaper-toggle', 'quick-feed-toggle'].forEach(id => {
-        document.getElementById(id).classList.remove('active');
+      ['quick-startsleep-toggle', 'quick-sleep-toggle', 'quick-brief-toggle', 'quick-diaper-toggle', 'quick-feed-toggle'].forEach(id => {
+        document.getElementById(id).classList.remove('active', 'auto');
       });
-      ['quick-startsleep-details', 'quick-sleep-details', 'quick-diaper-details', 'quick-feed-details'].forEach(id => {
+      ['quick-startsleep-details', 'quick-sleep-details', 'quick-brief-details', 'quick-diaper-details', 'quick-feed-details'].forEach(id => {
         document.getElementById(id).classList.remove('open');
       });
 
@@ -2210,14 +2279,18 @@
         if (entries.length > 0) {
           lastSleepEntry = entries[0];
           const type = lastSleepEntry.type === 'nap' ? '🌤️ Nap' : '🌙 Night';
-          infoEl.innerHTML = `Will end: <strong>${type}</strong> started at <strong>${formatDateTime(lastSleepEntry.start_time)}</strong>`;
+          const info = `<strong>${type}</strong> started at <strong>${formatDateTime(lastSleepEntry.start_time)}</strong>`;
+          infoEl.innerHTML = `Will end: ${info}`;
+          document.getElementById('quick-brief-info').innerHTML = `Will note on: ${info}`;
         } else {
           lastSleepEntry = null;
           infoEl.textContent = 'No recent sleep entry found';
+          document.getElementById('quick-brief-info').textContent = 'No recent sleep entry found';
         }
       } catch {
         lastSleepEntry = null;
         infoEl.textContent = 'Could not load sleep entries';
+        document.getElementById('quick-brief-info').textContent = 'Could not load sleep entries';
       }
     }
 
@@ -2232,6 +2305,7 @@
       const notes = document.getElementById('quick-notes').value;
       const startSleepOn = document.getElementById('quick-startsleep-toggle').classList.contains('active');
       const sleepOn = document.getElementById('quick-sleep-toggle').classList.contains('active');
+      const briefOn = document.getElementById('quick-brief-toggle').classList.contains('active');
       const diaperOn = document.getElementById('quick-diaper-toggle').classList.contains('active');
       const feedOn = document.getElementById('quick-feed-toggle').classList.contains('active');
 
@@ -2262,6 +2336,19 @@
             start_time: lastSleepEntry.start_time,
             end_time: time,
             notes: lastSleepEntry.notes ? lastSleepEntry.notes + (notes ? ' | Quick: ' + notes : '') : (notes ? 'Quick: ' + notes : ''),
+          }
+        }));
+        count++;
+      }
+
+      // Brief wake-up (create distinct record)
+      if (briefOn && lastSleepEntry) {
+        promises.push(api('/api/wakeups', {
+          method: 'POST',
+          body: {
+            sleep_entry_id: lastSleepEntry.id,
+            time: time,
+            notes: notes || '',
           }
         }));
         count++;

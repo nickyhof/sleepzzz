@@ -143,6 +143,29 @@ async function handleAPI(path, method, request, env) {
         return { success: true };
     }
 
+    // ── Wake-ups ─────────────────────────────────────────
+    if (path === '/api/wakeups' && method === 'GET') {
+        const days = new URL(request.url).searchParams.get('days') || 30;
+        const { results } = await db.prepare(
+            `SELECT * FROM wake_ups WHERE time >= datetime('now', '-' || ? || ' days') ORDER BY time DESC`
+        ).bind(days).all();
+        return results;
+    }
+
+    if (path === '/api/wakeups' && method === 'POST') {
+        const body = await request.json();
+        const { meta } = await db.prepare(
+            `INSERT INTO wake_ups (sleep_entry_id, time, notes) VALUES (?, ?, ?)`
+        ).bind(body.sleep_entry_id, body.time, body.notes || '').run();
+        return { id: meta.last_row_id, success: true };
+    }
+
+    if (path.startsWith('/api/wakeups/') && method === 'DELETE') {
+        const id = path.split('/').pop();
+        await db.prepare('DELETE FROM wake_ups WHERE id = ?').bind(id).run();
+        return { success: true };
+    }
+
     // ── Analytics ────────────────────────────────────────
     if (path === '/api/analytics' && method === 'GET') {
         const days = new URL(request.url).searchParams.get('days') || 7;
