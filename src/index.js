@@ -168,30 +168,106 @@ async function handleAPI(path, method, request, env) {
 
     // ── Analytics ────────────────────────────────────────
     if (path === '/api/analytics' && method === 'GET') {
-        const days = new URL(request.url).searchParams.get('days') || 7;
-        return await getAnalytics(db, days);
+        const params = new URL(request.url).searchParams;
+        const days = params.get('days') || 7;
+        const tz = parseInt(params.get('tz') || '0', 10);
+        return await getAnalytics(db, days, tz);
+    }
+
+    // ── AI Insights ─────────────────────────────────────
+    if (path === '/api/insights' && method === 'GET') {
+        const apiKey = env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error('Gemini API key not configured');
+
+        // Gather last 7 days of data
+        const [sleep, feeds, diapers, wakeups] = await Promise.all([
+            db.prepare(`SELECT type, start_time, end_time, duration_minutes, notes FROM sleep_entries WHERE start_time >= datetime('now', '-7 days') ORDER BY start_time DESC`).all(),
+            db.prepare(`SELECT type, time, amount_oz, amount_tsp, sub_type, category FROM feed_entries WHERE time >= datetime('now', '-7 days') ORDER BY time DESC`).all(),
+            db.prepare(`SELECT type, time FROM diaper_entries WHERE time >= datetime('now', '-7 days') ORDER BY time DESC`).all(),
+            db.prepare(`SELECT time, notes FROM wake_ups WHERE time >= datetime('now', '-7 days') ORDER BY time DESC`).all(),
+        ]);
+
+        // Build summary
+        const summary = {
+            sleep: sleep.results.map(e => `${e.type}: ${e.start_time} → ${e.end_time} (${e.duration_minutes}min${e.notes ? ', ' + e.notes : ''})`),
+            feeds: feeds.results.map(e => {
+                if (e.type === 'milk') return `Milk (${e.sub_type || 'formula'}): ${e.amount_oz}oz at ${e.time}`;
+                return `Solid (${e.category || ''}): ${e.amount_tsp}tsp at ${e.time}`;
+            }),
+            diapers: diapers.results.map(e => `${e.type} at ${e.time}`),
+            wakeups: wakeups.results.map(e => `Woke at ${e.time}${e.notes ? ' (' + e.notes + ')' : ''}`),
+        };
+
+        const prompt = `You are a warm, knowledgeable baby care assistant for a parent tracking their baby's sleep, feeding, and diaper patterns. Analyze the past 7 days of data below and provide:
+
+1. **Patterns** — 2-3 key observations about sleep schedule, feeding patterns, or diaper trends
+2. **Suggestions** — 1-2 gentle, actionable tips based on what you see
+3. **Encouragement** — A brief, genuine word of encouragement for the parent
+
+Keep your response concise (under 200 words), warm, and supportive. Use emoji sparingly. Don't be overly clinical. Address the parent directly with "you" and refer to the baby as "your little one."
+
+Data from the last 7 days:
+- Sleep sessions (${sleep.results.length}): ${summary.sleep.join(' | ') || 'None recorded'}
+- Feeds (${feeds.results.length}): ${summary.feeds.join(' | ') || 'None recorded'}
+- Diapers (${diapers.results.length}): ${summary.diapers.join(' | ') || 'None recorded'}
+- Brief wake-ups (${wakeups.results.length}): ${summary.wakeups.join(' | ') || 'None recorded'}`;
+
+        const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
+        let geminiData;
+        let lastErr;
+        for (const model of models) {
+            const geminiRes = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { temperature: 0.7, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
+                    }),
+                }
+            );
+            if (geminiRes.ok) {
+                geminiData = await geminiRes.json();
+                break;
+            }
+            lastErr = await geminiRes.text();
+        }
+
+        if (!geminiData) {
+            throw new Error('Gemini API error: ' + lastErr);
+        }
+
+        const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'No insights available right now.';
+        return { insights: text };
     }
 
     throw new Error('Not found');
 }
 
-async function getAnalytics(db, days) {
-    // Daily sleep totals grouped by type
+async function getAnalytics(db, days, tzOffsetMinutes = 0) {
+    // Convert JS getTimezoneOffset (minutes behind UTC) to SQLite offset string
+    // e.g., 300 (EST) -> '-5 hours', -60 (CET) -> '+1 hours'
+    const offsetHours = -(tzOffsetMinutes / 60);
+    const sign = offsetHours >= 0 ? '+' : '';
+    const tzMod = `${sign}${offsetHours} hours`;
+
+    // Daily sleep totals grouped by type (local time)
     const { results: sleepDaily } = await db.prepare(`
-    SELECT date(start_time) as date, type,
+    SELECT date(start_time, '${tzMod}') as date, type,
            SUM(duration_minutes) as total_minutes,
            COUNT(*) as count
     FROM sleep_entries
     WHERE start_time >= datetime('now', '-' || ? || ' days')
-    GROUP BY date(start_time), type
+    GROUP BY date(start_time, '${tzMod}'), type
     ORDER BY date
   `).bind(days).all();
 
-    // Sleep by time of day (nap = 8am-5pm, night = 5pm-8am)
+    // Sleep by time of day (nap = 8am-5pm, night = 5pm-8am) - local hour
     const { results: sleepByPeriod } = await db.prepare(`
     SELECT
       CASE
-        WHEN CAST(strftime('%H', start_time) AS INTEGER) BETWEEN 8 AND 16 THEN 'morning'
+        WHEN CAST(strftime('%H', start_time, '${tzMod}') AS INTEGER) BETWEEN 8 AND 16 THEN 'morning'
         ELSE 'evening'
       END as period,
       SUM(duration_minutes) as total_minutes
@@ -200,23 +276,23 @@ async function getAnalytics(db, days) {
     GROUP BY period
   `).bind(days).all();
 
-    // Daily feed totals
+    // Daily feed totals (local time)
     const { results: feedDaily } = await db.prepare(`
-    SELECT date(time) as date, type,
+    SELECT date(time, '${tzMod}') as date, type,
            SUM(amount_oz) as total_oz,
            SUM(amount_tsp) as total_tsp,
            COUNT(*) as count
     FROM feed_entries
     WHERE time >= datetime('now', '-' || ? || ' days')
-    GROUP BY date(time), type
+    GROUP BY date(time, '${tzMod}'), type
     ORDER BY date
   `).bind(days).all();
 
-    // Feed by time of day
+    // Feed by time of day - local hour
     const { results: feedByPeriod } = await db.prepare(`
     SELECT
       CASE
-        WHEN CAST(strftime('%H', time) AS INTEGER) BETWEEN 8 AND 16 THEN 'morning'
+        WHEN CAST(strftime('%H', time, '${tzMod}') AS INTEGER) BETWEEN 8 AND 16 THEN 'morning'
         ELSE 'evening'
       END as period,
       SUM(amount_oz) as total_oz,
@@ -226,12 +302,12 @@ async function getAnalytics(db, days) {
     GROUP BY period
   `).bind(days).all();
 
-    // Daily diaper counts
+    // Daily diaper counts (local time)
     const { results: diaperDaily } = await db.prepare(`
-    SELECT date(time) as date, type, COUNT(*) as count
+    SELECT date(time, '${tzMod}') as date, type, COUNT(*) as count
     FROM diaper_entries
     WHERE time >= datetime('now', '-' || ? || ' days')
-    GROUP BY date(time), type
+    GROUP BY date(time, '${tzMod}'), type
     ORDER BY date
   `).bind(days).all();
 

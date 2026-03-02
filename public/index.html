@@ -1177,6 +1177,23 @@
 
     <!-- ═══ DASHBOARD PANEL ═══ -->
     <div class="panel" id="panel-dashboard">
+      <div class="chart-card" id="insights-card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer"
+          onclick="toggleInsights()">
+          <h4 style="margin:0">✨ AI Insights</h4>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn btn-secondary" style="padding:4px 10px;font-size:0.75rem"
+              onclick="event.stopPropagation();loadInsights(true)">🔄</button>
+            <span id="insights-arrow"
+              style="font-size:0.8rem;color:var(--text-muted);transition:transform 0.2s">▼</span>
+          </div>
+        </div>
+        <div id="insights-body"
+          style="font-size:0.85rem;line-height:1.6;color:var(--text);white-space:pre-wrap;padding:0;max-height:0;overflow:hidden;transition:max-height 0.3s ease,padding 0.3s ease">
+          <span style="color:var(--text-muted)">Loading insights...</span>
+        </div>
+      </div>
+
       <div class="range-selector">
         <button class="range-btn" data-days="1">Today</button>
         <button class="range-btn" data-days="2">Yesterday</button>
@@ -1658,7 +1675,8 @@
 
     // ═══ Dashboard ═════════════════════════════════════
     async function loadDashboard() {
-      const data = await api(`/api/analytics?days=${currentDays}`);
+      const tzOffset = new Date().getTimezoneOffset(); // minutes behind UTC (e.g., 300 for EST)
+      const data = await api(`/api/analytics?days=${currentDays}&tz=${tzOffset}`);
 
       // Summary stats
       const hrs = (data.summary.totalSleepMinutes / 60).toFixed(1);
@@ -1666,12 +1684,12 @@
       document.getElementById('stat-milk-oz').textContent = data.summary.totalMilkOz || 0;
       document.getElementById('stat-diapers').textContent = data.summary.totalDiapers || 0;
 
-      // Build date labels
+      // Build date labels (local timezone)
       const dates = [];
       for (let i = currentDays - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        dates.push(d.toISOString().slice(0, 10));
+        dates.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
       }
       const dateLabels = dates.map(d => {
         const dt = new Date(d + 'T12:00:00');
@@ -1782,6 +1800,63 @@
         api(`/api/wakeups?days=${currentDays}`),
       ]);
       renderTimeline(dates, sleepRaw, feedRaw, diaperRaw, wakeupRaw);
+
+      // Load AI insights (non-blocking)
+      loadInsights();
+    }
+
+    function toggleInsights() {
+      const body = document.getElementById('insights-body');
+      const arrow = document.getElementById('insights-arrow');
+      const isOpen = body.style.maxHeight !== '0px';
+      if (isOpen) {
+        body.style.maxHeight = '0px';
+        body.style.padding = '0';
+        arrow.style.transform = 'rotate(0deg)';
+      } else {
+        body.style.maxHeight = 'none';
+        body.style.padding = '8px 0';
+        arrow.style.transform = 'rotate(180deg)';
+      }
+    }
+
+    async function loadInsights(force = false) {
+      const el = document.getElementById('insights-body');
+      const arrow = document.getElementById('insights-arrow');
+      const CACHE_KEY = 'sleepzzz_insights';
+      const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+      function expand() {
+        el.style.maxHeight = 'none';
+        el.style.padding = '8px 0';
+        arrow.style.transform = 'rotate(180deg)';
+      }
+
+      // Check cache first (unless forced refresh)
+      if (!force) {
+        try {
+          const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
+          if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
+            el.innerHTML = cached.html;
+            expand();
+            return;
+          }
+        } catch (e) { }
+      }
+
+      // Show loading and expand
+      el.innerHTML = '<span style="color:var(--text-muted)">✨ Generating insights...</span>';
+      expand();
+      try {
+        const data = await api('/api/insights');
+        let html = data.insights
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\n/g, '<br>');
+        el.innerHTML = html;
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ html, ts: Date.now() }));
+      } catch (err) {
+        el.innerHTML = '<span style="color:var(--text-muted)">Could not load insights. Tap refresh to try again.</span>';
+      }
     }
 
     function renderTimeline(dates, sleepEntries, feedEntries, diaperEntries, wakeupEntries = []) {
@@ -1793,7 +1868,8 @@
       const days = dates.slice(-3);
 
       function dateKey(iso) {
-        return new Date(iso).toISOString().slice(0, 10);
+        const d = new Date(iso);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       }
 
       function minuteOfDay(iso) {
@@ -1837,38 +1913,44 @@
             return `<div class="tl-sleep-v ${e.type}" style="top:${px(startMin)};height:${px(endMin - startMin)}" title="${e.type}: ${dur}" onclick="showToast('${typeLabel}: ${dur} (${timeRange})')"></div>`;
           }).join('');
 
-        // Feed markers
-        const feedMarkers = feedEntries
-          .filter(e => dateKey(e.time) === date)
-          .map(e => {
-            const min = minuteOfDay(e.time);
-            const tip = e.type === 'milk' ? `${e.amount_oz || 0}oz ${e.sub_type || ''}`.trim() : `${e.amount_tsp || 0}tsp`;
-            const time = formatDateTime(e.time);
-            return `<div class="tl-evt" style="top:${px(min)}" title="Feed: ${tip}" onclick="showToast('🍼 Feed: ${tip} at ${time}')">🍼</div>`;
-          }).join('');
+        // Collect all events into one array for proper lateral spacing
+        const allEvents = [];
 
-        // Diaper markers
-        const diaperMarkers = diaperEntries
-          .filter(e => dateKey(e.time) === date)
-          .map(e => {
-            const min = minuteOfDay(e.time);
-            const time = formatDateTime(e.time);
-            return `<div class="tl-evt" style="top:${px(min)}" title="Diaper: ${e.type}" onclick="showToast('👶 Diaper: ${e.type} at ${time}')">👶</div>`;
-          }).join('');
+        feedEntries.filter(e => dateKey(e.time) === date).forEach(e => {
+          const min = minuteOfDay(e.time);
+          const tip = e.type === 'milk' ? `${e.amount_oz || 0}oz ${e.sub_type || ''}`.trim() : `${e.amount_tsp || 0}tsp`;
+          const time = formatDateTime(e.time);
+          allEvents.push({ min, html: `🍼`, title: `Feed: ${tip}`, toast: `🍼 Feed: ${tip} at ${time}` });
+        });
 
-        // Wake-up markers
-        const wakeupMarkers = wakeupEntries
-          .filter(e => dateKey(e.time) === date)
-          .map(e => {
-            const min = minuteOfDay(e.time);
-            const time = formatDateTime(e.time);
-            const note = e.notes ? ` — ${e.notes}` : '';
-            return `<div class="tl-evt" style="top:${px(min)}" title="Woke briefly${note}" onclick="showToast('⏰ Woke briefly at ${time}${note}')">⏰</div>`;
-          }).join('');
+        diaperEntries.filter(e => dateKey(e.time) === date).forEach(e => {
+          const min = minuteOfDay(e.time);
+          const time = formatDateTime(e.time);
+          allEvents.push({ min, html: `👶`, title: `Diaper: ${e.type}`, toast: `👶 Diaper: ${e.type} at ${time}` });
+        });
+
+        wakeupEntries.filter(e => dateKey(e.time) === date).forEach(e => {
+          const min = minuteOfDay(e.time);
+          const time = formatDateTime(e.time);
+          const note = e.notes ? ` — ${e.notes}` : '';
+          allEvents.push({ min, html: `⏰`, title: `Woke briefly${note}`, toast: `⏰ Woke briefly at ${time}${note}` });
+        });
+
+        // Sort by time and offset overlapping events horizontally
+        allEvents.sort((a, b) => a.min - b.min);
+        const eventMarkers = allEvents.map((evt, i) => {
+          // Count how many events are within 15 min of this one (before it)
+          let offset = 0;
+          for (let j = 0; j < i; j++) {
+            if (Math.abs(allEvents[j].min - evt.min) < 15) offset++;
+          }
+          const rightPct = 5 + offset * 16; // stagger right position
+          return `<div class="tl-evt" style="top:${px(evt.min)};right:${rightPct}%" title="${evt.title}" onclick="showToast('${evt.toast}')">${evt.html}</div>`;
+        }).join('');
 
         return `<div class="tl-col">
           <div class="tl-col-header">${dayLabel}</div>
-          <div class="tl-col-bar">${sleepBars}${feedMarkers}${diaperMarkers}${wakeupMarkers}</div>
+          <div class="tl-col-bar">${sleepBars}${eventMarkers}</div>
         </div>`;
       }).join('');
 
