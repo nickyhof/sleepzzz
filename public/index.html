@@ -1315,7 +1315,7 @@
         </div>
 
         <div class="toggle-row">
-          <div class="toggle-label">😴 Woke Up<span>End the current sleep session</span></div>
+          <div class="toggle-label">😴 End Sleep<span>End the current sleep session</span></div>
           <div class="toggle" id="quick-sleep-toggle"></div>
         </div>
         <div class="toggle-details" id="quick-sleep-details">
@@ -2271,7 +2271,7 @@
       // Show modal
       document.getElementById('quick-modal').classList.add('visible');
 
-      // Find the most recent sleep entry for "Woke Up"
+      // Find the most recent sleep entry for "End Sleep"
       const infoEl = document.getElementById('quick-sleep-info');
       infoEl.textContent = 'Loading...';
       try {
@@ -2281,7 +2281,7 @@
           const type = lastSleepEntry.type === 'nap' ? '🌤️ Nap' : '🌙 Night';
           const info = `<strong>${type}</strong> started at <strong>${formatDateTime(lastSleepEntry.start_time)}</strong>`;
           infoEl.innerHTML = `Will end: ${info}`;
-          document.getElementById('quick-brief-info').innerHTML = `Will note on: ${info}`;
+          document.getElementById('quick-brief-info').innerHTML = `Will track on: ${info}`;
         } else {
           lastSleepEntry = null;
           infoEl.textContent = 'No recent sleep entry found';
