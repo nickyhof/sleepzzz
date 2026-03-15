@@ -200,11 +200,11 @@ async function handleAPI(path, method, request, env) {
 
         const prompt = `You are a warm, knowledgeable baby care assistant for a parent tracking their baby's sleep, feeding, and diaper patterns. Analyze the past 7 days of data below and provide:
 
-1. **Patterns** — 2-3 key observations about sleep schedule, feeding patterns, or diaper trends
-2. **Suggestions** — 1-2 gentle, actionable tips based on what you see
+1. **Suggestions** — 3-4 thoughtful, detailed, and actionable suggestions based on the data. Each suggestion should explain *why* it matters and give a concrete step the parent can try. Draw from pediatric best practices and tailor them to the specific patterns you see.
+2. **Patterns** — 2-3 key observations about sleep schedule, feeding patterns, or diaper trends
 3. **Encouragement** — A brief, genuine word of encouragement for the parent
 
-Keep your response concise (under 200 words), warm, and supportive. Use emoji sparingly. Don't be overly clinical. Address the parent directly with "you" and refer to the baby as "your little one."
+Keep your response under 350 words, warm, and supportive. Use emoji sparingly. Don't be overly clinical. Address the parent directly with "you" and refer to the baby as "your little one."
 
 Data from the last 7 days:
 - Sleep sessions (${sleep.results.length}): ${summary.sleep.join(' | ') || 'None recorded'}
@@ -212,7 +212,7 @@ Data from the last 7 days:
 - Diapers (${diapers.results.length}): ${summary.diapers.join(' | ') || 'None recorded'}
 - Brief wake-ups (${wakeups.results.length}): ${summary.wakeups.join(' | ') || 'None recorded'}`;
 
-        const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
+        const models = ['gemini-2.5-pro', 'gemini-2.5-flash'];
         let geminiData;
         let lastErr;
         for (const model of models) {
