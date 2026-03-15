@@ -9,3 +9,6 @@ directory = "public"
 binding = "DB"
 database_name = "sleepzzz-db"
 database_id = "29b3ce07-4e06-4a11-aa7f-d59f19b48db5"
+
+[triggers]
+crons = ["0 23 * * *"]

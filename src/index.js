@@ -36,6 +36,10 @@ export default {
         // Let Cloudflare serve static assets from public/
         return env.ASSETS.fetch(request);
     },
+
+    async scheduled(event, env, ctx) {
+        ctx.waitUntil(generateAndCacheInsights(env));
+    },
 };
 
 async function handleAPI(path, method, request, env) {
@@ -174,72 +178,13 @@ async function handleAPI(path, method, request, env) {
         return await getAnalytics(db, days, tz);
     }
 
-    // ── AI Insights ─────────────────────────────────────
+    // ── AI Insights (cached) ─────────────────────────────
     if (path === '/api/insights' && method === 'GET') {
-        const apiKey = env.GEMINI_API_KEY;
-        if (!apiKey) throw new Error('Gemini API key not configured');
-
-        // Gather last 7 days of data
-        const [sleep, feeds, diapers, wakeups] = await Promise.all([
-            db.prepare(`SELECT type, start_time, end_time, duration_minutes, notes FROM sleep_entries WHERE start_time >= datetime('now', '-7 days') ORDER BY start_time DESC`).all(),
-            db.prepare(`SELECT type, time, amount_oz, amount_tsp, sub_type, category FROM feed_entries WHERE time >= datetime('now', '-7 days') ORDER BY time DESC`).all(),
-            db.prepare(`SELECT type, time FROM diaper_entries WHERE time >= datetime('now', '-7 days') ORDER BY time DESC`).all(),
-            db.prepare(`SELECT time, notes FROM wake_ups WHERE time >= datetime('now', '-7 days') ORDER BY time DESC`).all(),
-        ]);
-
-        // Build summary
-        const summary = {
-            sleep: sleep.results.map(e => `${e.type}: ${e.start_time} → ${e.end_time} (${e.duration_minutes}min${e.notes ? ', ' + e.notes : ''})`),
-            feeds: feeds.results.map(e => {
-                if (e.type === 'milk') return `Milk (${e.sub_type || 'formula'}): ${e.amount_oz}oz at ${e.time}`;
-                return `Solid (${e.category || ''}): ${e.amount_tsp}tsp at ${e.time}`;
-            }),
-            diapers: diapers.results.map(e => `${e.type} at ${e.time}`),
-            wakeups: wakeups.results.map(e => `Woke at ${e.time}${e.notes ? ' (' + e.notes + ')' : ''}`),
+        const row = await db.prepare('SELECT insights_text, generated_at FROM insights_cache WHERE id = 1').first();
+        return {
+            insights: row?.insights_text || 'No insights yet — check back after 6 PM!',
+            generated_at: row?.generated_at || null,
         };
-
-        const prompt = `You are a warm, knowledgeable baby care assistant for a parent tracking their baby's sleep, feeding, and diaper patterns. Analyze the past 7 days of data below and provide:
-
-1. **Suggestions** — 3-4 thoughtful, detailed, and actionable suggestions based on the data. Each suggestion should explain *why* it matters and give a concrete step the parent can try. Draw from pediatric best practices and tailor them to the specific patterns you see.
-2. **Patterns** — 2-3 key observations about sleep schedule, feeding patterns, or diaper trends
-3. **Encouragement** — A brief, genuine word of encouragement for the parent
-
-Keep your response under 350 words, warm, and supportive. Use emoji sparingly. Don't be overly clinical. Address the parent directly with "you" and refer to the baby as "your little one."
-
-Data from the last 7 days:
-- Sleep sessions (${sleep.results.length}): ${summary.sleep.join(' | ') || 'None recorded'}
-- Feeds (${feeds.results.length}): ${summary.feeds.join(' | ') || 'None recorded'}
-- Diapers (${diapers.results.length}): ${summary.diapers.join(' | ') || 'None recorded'}
-- Brief wake-ups (${wakeups.results.length}): ${summary.wakeups.join(' | ') || 'None recorded'}`;
-
-        const models = ['gemini-2.5-pro', 'gemini-2.5-flash'];
-        let geminiData;
-        let lastErr;
-        for (const model of models) {
-            const geminiRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: { temperature: 0.7, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
-                    }),
-                }
-            );
-            if (geminiRes.ok) {
-                geminiData = await geminiRes.json();
-                break;
-            }
-            lastErr = await geminiRes.text();
-        }
-
-        if (!geminiData) {
-            throw new Error('Gemini API error: ' + lastErr);
-        }
-
-        const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'No insights available right now.';
-        return { insights: text };
     }
 
     throw new Error('Not found');
@@ -352,4 +297,83 @@ function calcMinutes(start, end) {
     const s = new Date(start);
     const e = new Date(end);
     return Math.round((e - s) / 60000);
+}
+
+async function generateAndCacheInsights(env) {
+    const db = env.DB;
+    const apiKey = env.GEMINI_API_KEY;
+    if (!apiKey) {
+        console.error('Gemini API key not configured — skipping insights generation');
+        return;
+    }
+
+    // Gather last 7 days of data
+    const [sleep, feeds, diapers, wakeups] = await Promise.all([
+        db.prepare(`SELECT type, start_time, end_time, duration_minutes, notes FROM sleep_entries WHERE start_time >= datetime('now', '-7 days') ORDER BY start_time DESC`).all(),
+        db.prepare(`SELECT type, time, amount_oz, amount_tsp, sub_type, category FROM feed_entries WHERE time >= datetime('now', '-7 days') ORDER BY time DESC`).all(),
+        db.prepare(`SELECT type, time FROM diaper_entries WHERE time >= datetime('now', '-7 days') ORDER BY time DESC`).all(),
+        db.prepare(`SELECT time, notes FROM wake_ups WHERE time >= datetime('now', '-7 days') ORDER BY time DESC`).all(),
+    ]);
+
+    // Build summary
+    const summary = {
+        sleep: sleep.results.map(e => `${e.type}: ${e.start_time} → ${e.end_time} (${e.duration_minutes}min${e.notes ? ', ' + e.notes : ''})`),
+        feeds: feeds.results.map(e => {
+            if (e.type === 'milk') return `Milk (${e.sub_type || 'formula'}): ${e.amount_oz}oz at ${e.time}`;
+            return `Solid (${e.category || ''}): ${e.amount_tsp}tsp at ${e.time}`;
+        }),
+        diapers: diapers.results.map(e => `${e.type} at ${e.time}`),
+        wakeups: wakeups.results.map(e => `Woke at ${e.time}${e.notes ? ' (' + e.notes + ')' : ''}`),
+    };
+
+    const prompt = `You are a warm, knowledgeable baby care assistant for a parent tracking their baby's sleep, feeding, and diaper patterns. Analyze the past 7 days of data below and provide:
+
+1. **Suggestions** — 3-4 thoughtful, detailed, and actionable suggestions based on the data. Each suggestion should explain *why* it matters and give a concrete step the parent can try. Draw from pediatric best practices and tailor them to the specific patterns you see.
+2. **Patterns** — 2-3 key observations about sleep schedule, feeding patterns, or diaper trends
+3. **Encouragement** — A brief, genuine word of encouragement for the parent
+
+Keep your response under 350 words, warm, and supportive. Use emoji sparingly. Don't be overly clinical. Address the parent directly with "you" and refer to the baby as "your little one."
+
+Data from the last 7 days:
+- Sleep sessions (${sleep.results.length}): ${summary.sleep.join(' | ') || 'None recorded'}
+- Feeds (${feeds.results.length}): ${summary.feeds.join(' | ') || 'None recorded'}
+- Diapers (${diapers.results.length}): ${summary.diapers.join(' | ') || 'None recorded'}
+- Brief wake-ups (${wakeups.results.length}): ${summary.wakeups.join(' | ') || 'None recorded'}`;
+
+    const models = ['gemini-2.5-pro', 'gemini-2.5-flash'];
+    let geminiData;
+    let lastErr;
+    for (const model of models) {
+        const geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.7, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
+                }),
+            }
+        );
+        if (geminiRes.ok) {
+            geminiData = await geminiRes.json();
+            break;
+        }
+        lastErr = await geminiRes.text();
+    }
+
+    if (!geminiData) {
+        console.error('Gemini API error:', lastErr);
+        return;
+    }
+
+    const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'No insights available right now.';
+
+    // Upsert into insights_cache
+    await db.prepare(
+        `INSERT INTO insights_cache (id, insights_text, generated_at) VALUES (1, ?, datetime('now'))
+         ON CONFLICT(id) DO UPDATE SET insights_text = excluded.insights_text, generated_at = excluded.generated_at`
+    ).bind(text).run();
+
+    console.log('Insights generated and cached successfully');
 }

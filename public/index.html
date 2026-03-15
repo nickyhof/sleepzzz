@@ -1182,8 +1182,7 @@
           onclick="toggleInsights()">
           <h4 style="margin:0">✨ AI Insights</h4>
           <div style="display:flex;gap:6px;align-items:center">
-            <button class="btn btn-secondary" style="padding:4px 10px;font-size:0.75rem"
-              onclick="event.stopPropagation();loadInsights(true)">🔄</button>
+            <span id="insights-updated" style="font-size:0.7rem;color:var(--text-muted)"></span>
             <span id="insights-arrow"
               style="font-size:0.8rem;color:var(--text-muted);transition:transform 0.2s">▼</span>
           </div>
@@ -1820,11 +1819,10 @@
       }
     }
 
-    async function loadInsights(force = false) {
+    async function loadInsights() {
       const el = document.getElementById('insights-body');
       const arrow = document.getElementById('insights-arrow');
-      const CACHE_KEY = 'sleepzzz_insights';
-      const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+      const updatedEl = document.getElementById('insights-updated');
 
       function expand() {
         el.style.maxHeight = 'none';
@@ -1832,30 +1830,21 @@
         arrow.style.transform = 'rotate(180deg)';
       }
 
-      // Check cache first (unless forced refresh)
-      if (!force) {
-        try {
-          const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
-          if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
-            el.innerHTML = cached.html;
-            expand();
-            return;
-          }
-        } catch (e) { }
-      }
-
-      // Show loading and expand
-      el.innerHTML = '<span style="color:var(--text-muted)">✨ Generating insights...</span>';
-      expand();
       try {
         const data = await api('/api/insights');
         let html = data.insights
           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
           .replace(/\n/g, '<br>');
         el.innerHTML = html;
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ html, ts: Date.now() }));
+        if (data.generated_at) {
+          const d = new Date(data.generated_at + 'Z');
+          updatedEl.textContent = 'Updated ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+            ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        }
+        expand();
       } catch (err) {
-        el.innerHTML = '<span style="color:var(--text-muted)">Could not load insights. Tap refresh to try again.</span>';
+        el.innerHTML = '<span style="color:var(--text-muted)">Could not load insights.</span>';
+        expand();
       }
     }
 
