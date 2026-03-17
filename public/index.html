@@ -57,7 +57,7 @@
     .header {
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: white;
-      padding: 20px 24px 16px;
+      padding: calc(8px + env(safe-area-inset-top, 12px)) 24px 16px;
       text-align: center;
       position: sticky;
       top: 0;
@@ -892,7 +892,7 @@
     }
 
     .tl-sleep-v.nap {
-      background: rgba(167, 139, 250, 0.8);
+      background: rgba(252, 211, 77, 0.8);
     }
 
     .tl-sleep-v.night {
@@ -1220,9 +1220,10 @@
         <h4>� Daily Timeline</h4>
         <p class="timeline-desc">Compare the last 3 days side-by-side. Sleep as bars, feeds & diapers as icons.</p>
         <div class="timeline-legend">
-          <span><span class="legend-swatch" style="background:rgba(167,139,250,0.8)"></span> 🌤️ Nap</span>
+          <span><span class="legend-swatch" style="background:rgba(252,211,77,0.8)"></span> 🌤️ Nap</span>
           <span><span class="legend-swatch" style="background:rgba(91,62,158,0.8)"></span> 🌙 Night</span>
-          <span>🍼 Feed</span>
+          <span>🍼 Milk</span>
+          <span>🥣 Solid</span>
           <span>👶 Diaper</span>
           <span>⏰ Wake-up</span>
         </div>
@@ -1388,7 +1389,7 @@
   </div>
 
   <!-- FAB -->
-  <button class="fab" onclick="openQuickModal()" title="Quick Entry">⚡</button>
+  <button class="fab" onclick="openQuickModal()" title="Quick Entry"><span style="font-weight:700;font-size:1.1rem;letter-spacing:-1px">Zzz</span></button>
 
   <div class="toast" id="toast"></div>
 
@@ -1477,11 +1478,16 @@
       return h > 0 ? `${h}h ${m}m` : `${m}m`;
     }
 
+    let _toastTimer;
     function showToast(msg) {
       const t = document.getElementById('toast');
+      clearTimeout(_toastTimer);
+      t.classList.remove('show');
+      // Force reflow so the re-add triggers the CSS transition fresh
+      void t.offsetWidth;
       t.textContent = msg;
       t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 4000);
+      _toastTimer = setTimeout(() => t.classList.remove('show'), 10000);
     }
 
     async function api(path, opts = {}) {
@@ -1708,7 +1714,7 @@
       renderChart('chart-sleep', 'bar', {
         labels: dateLabels,
         datasets: [
-          { label: 'Naps', data: napData, backgroundColor: 'rgba(167,139,250,0.6)', borderRadius: 6, borderSkipped: false },
+          { label: 'Naps', data: napData, backgroundColor: 'rgba(252,211,77,0.7)', borderRadius: 6, borderSkipped: false },
           { label: 'Night', data: nightData, backgroundColor: 'rgba(91,62,158,0.6)', borderRadius: 6, borderSkipped: false },
         ]
       }, { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Hours' } } } });
@@ -1909,7 +1915,8 @@
           const min = minuteOfDay(e.time);
           const tip = e.type === 'milk' ? `${e.amount_oz || 0}oz ${e.sub_type || ''}`.trim() : `${e.amount_tsp || 0}tsp`;
           const time = formatDateTime(e.time);
-          allEvents.push({ min, html: `🍼`, title: `Feed: ${tip}`, toast: `🍼 Feed: ${tip} at ${time}` });
+          const feedIcon = e.type === 'milk' ? '🍼' : '🥣';
+          allEvents.push({ min, html: feedIcon, title: `Feed: ${tip}`, toast: `${feedIcon} Feed: ${tip} at ${time}` });
         });
 
         diaperEntries.filter(e => dateKey(e.time) === date).forEach(e => {
