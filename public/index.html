@@ -1112,6 +1112,7 @@
               <div class="category-pill" data-value="meat">🍗 Meat</div>
               <div class="category-pill" data-value="dairy">🧀 Dairy</div>
               <div class="category-pill" data-value="fish">🐟 Fish</div>
+              <div class="category-pill" data-value="shellfish">🦞 Shellfish</div>
               <div class="category-pill" data-value="nuts">🥜 Nuts</div>
               <div class="category-pill" data-value="grain">🌾 Grain</div>
               <div class="category-pill" data-value="egg">🥚 Egg</div>
@@ -1593,7 +1594,7 @@
     const subTypeLabels = { formula: 'Formula', breast_milk: 'Breast Milk' };
     const categoryIcons = {
       fruit: '🍎', vegetable: '🥦', meat: '🍗', dairy: '🧀',
-      fish: '🐟', nuts: '🥜', grain: '🌾', egg: '🥚', other: '🥄'
+      fish: '🐟', shellfish: '🦞', nuts: '🥜', grain: '🌾', egg: '🥚', other: '🥄'
     };
 
     async function loadFeeds() {
@@ -2076,8 +2077,8 @@
     }
 
     // ── Edit Modal ───────────────────────────────────
-    const allCategories = ['fruit', 'vegetable', 'meat', 'dairy', 'fish', 'nuts', 'grain', 'egg', 'other'];
-    const catEmojis = { fruit: '🍎', vegetable: '🥦', meat: '🍗', dairy: '🧀', fish: '🐟', nuts: '🥜', grain: '🌾', egg: '🥚', other: '🥄' };
+    const allCategories = ['fruit', 'vegetable', 'meat', 'dairy', 'fish', 'shellfish', 'nuts', 'grain', 'egg', 'other'];
+    const catEmojis = { fruit: '🍎', vegetable: '🥦', meat: '🍗', dairy: '🧀', fish: '🐟', shellfish: '🦞', nuts: '🥜', grain: '🌾', egg: '🥚', other: '🥄' };
 
     function makePills(id, options, selected) {
       return `<div class="type-pills" id="${id}" style="margin-bottom:12px">${options.map(o =>
