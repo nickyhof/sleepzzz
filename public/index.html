@@ -1189,7 +1189,7 @@
           </div>
         </div>
         <div id="insights-body"
-          style="font-size:0.85rem;line-height:1.6;color:var(--text);white-space:pre-wrap;padding:0;max-height:0;overflow:hidden;transition:max-height 0.3s ease,padding 0.3s ease">
+          style="font-size:0.85rem;line-height:1.7;color:var(--text);padding:0;max-height:0;overflow:hidden;transition:max-height 0.3s ease,padding 0.3s ease">
           <span style="color:var(--text-muted)">Loading insights...</span>
         </div>
       </div>
@@ -1841,7 +1841,12 @@
         const data = await api('/api/insights');
         let html = data.insights
           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\n/g, '<br>');
+          .replace(/\*(.+?)\*/g, '<em>$1</em>')
+          .split(/\n\n+/)
+          .map(p => p.trim())
+          .filter(Boolean)
+          .map(p => `<p style="margin:0 0 10px">${p.replace(/\n/g, ' ')}</p>`)
+          .join('');
         el.innerHTML = html;
         if (data.generated_at) {
           const d = new Date(data.generated_at + 'Z');

@@ -301,9 +301,9 @@ function calcMinutes(start, end) {
 
 async function generateAndCacheInsights(env) {
     const db = env.DB;
-    const apiKey = env.GEMINI_API_KEY;
+    const apiKey = env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-        console.error('Gemini API key not configured — skipping insights generation');
+        console.error('Anthropic API key not configured — skipping insights generation');
         return;
     }
 
@@ -326,13 +326,11 @@ async function generateAndCacheInsights(env) {
         wakeups: wakeups.results.map(e => `Woke at ${e.time}${e.notes ? ' (' + e.notes + ')' : ''}`),
     };
 
-    const prompt = `You are a warm, knowledgeable baby care assistant for a parent tracking their baby's sleep, feeding, and diaper patterns. Analyze the past 7 days of data below and provide:
+    const prompt = `You're a friendly, caring baby care companion helping a parent understand their little one's week. Look at the past 7 days of data below and share what you notice — like a knowledgeable friend chatting over coffee.
 
-1. **Suggestions** — 3-4 thoughtful, detailed, and actionable suggestions based on the data. Each suggestion should explain *why* it matters and give a concrete step the parent can try. Draw from pediatric best practices and tailor them to the specific patterns you see.
-2. **Patterns** — 2-3 key observations about sleep schedule, feeding patterns, or diaper trends
-3. **Encouragement** — A brief, genuine word of encouragement for the parent
+Write in a natural, flowing way. Weave together what you're seeing in the patterns with gentle, practical ideas the parent could try. Explain *why* something matters when it's helpful. End with a few kind words.
 
-Keep your response under 350 words, warm, and supportive. Use emoji sparingly. Don't be overly clinical. Address the parent directly with "you" and refer to the baby as "your little one."
+Keep it under 300 words. Write in short paragraphs, no headings or bullet points. Use "you" and "your little one." Be warm but not saccharine.
 
 Data from the last 7 days:
 - Sleep sessions (${sleep.results.length}): ${summary.sleep.join(' | ') || 'None recorded'}
@@ -340,34 +338,27 @@ Data from the last 7 days:
 - Diapers (${diapers.results.length}): ${summary.diapers.join(' | ') || 'None recorded'}
 - Brief wake-ups (${wakeups.results.length}): ${summary.wakeups.join(' | ') || 'None recorded'}`;
 
-    const models = ['gemini-2.5-pro', 'gemini-2.5-flash'];
-    let geminiData;
-    let lastErr;
-    for (const model of models) {
-        const geminiRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { temperature: 0.7, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
-                }),
-            }
-        );
-        if (geminiRes.ok) {
-            geminiData = await geminiRes.json();
-            break;
-        }
-        lastErr = await geminiRes.text();
-    }
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 2048,
+            messages: [{ role: 'user', content: prompt }],
+        }),
+    });
 
-    if (!geminiData) {
-        console.error('Gemini API error:', lastErr);
+    if (!res.ok) {
+        console.error('Anthropic API error:', await res.text());
         return;
     }
 
-    const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'No insights available right now.';
+    const data = await res.json();
+    const text = data.content?.[0]?.text || 'No insights available right now.';
 
     // Upsert into insights_cache
     await db.prepare(
